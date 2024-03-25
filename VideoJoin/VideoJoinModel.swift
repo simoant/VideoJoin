@@ -32,7 +32,9 @@ struct Video {
 
 struct MergedVideo {
     var url: URL?
-    let fileSize: Int64
+    var composition: AVMutableComposition?
+    let fileSize: Int64?
+    var fileName: String?
 }
 
 class VideoJoinModel: ObservableObject {
@@ -202,21 +204,39 @@ class VideoJoinModel: ObservableObject {
                     insertTime = CMTimeAdd(insertTime, duration)
                 }
                 
-
+                DispatchQueue.main.async {
+                    self.mergedVideo = MergedVideo(url: nil, composition: composition, fileSize: nil, fileName: self.defaultFilename()) // Return both URL and file size
+                }
+            } catch {
+                self.handle(error)
+            }
+        }
+    }
+    
+    func save() {
+        Task {
+            do {
                 // Export to disk
+                
+                guard let composition = mergedVideo?.composition else {
+                    throw err("Videos composition is empty")
+                }
+                
                 guard let exportSession = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough) else {
                     throw err("Could not create export session")
                 }
                 
-
+                guard let fileName = mergedVideo?.fileName else {
+                    throw err("File name is empty")
+                }
                 
-                let outputFileURL = FileManager.default.temporaryDirectory.appendingPathComponent(defaultFilename() + ".mov")
+                let outputFileURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName + ".mov")
                 
                 exportSession.outputURL = outputFileURL
                 exportSession.outputFileType = .mov
+                let fileSize = try await exportSession.estimatedOutputFileLengthInBytes
                 log("Output url: \(outputFileURL)")
-
-
+                log("Output url: \(outputFileURL)")
                 
                 // Track progress
                 let timerHolder = TimerHolder()
@@ -234,7 +254,7 @@ class VideoJoinModel: ObservableObject {
                     // Ensure the timer is added to the main run loop and configured for common modes to allow it to fire while scrolling UI elements.
                     RunLoop.main.add(timerHolder.timer!, forMode: .common)
                 }
-
+                
                 await exportSession.export()
                 switch exportSession.status {
                 case .failed, .cancelled:
@@ -258,11 +278,10 @@ class VideoJoinModel: ObservableObject {
                     throw err("Could not fetch file size")
                 }
             } catch {
-//                try? await Task.sleep(nanoseconds: 1000_000_000)
-                // wait for showingModal to get true
-                self.handle(error)
+                handle(error)
             }
         }
+
     }
     
     func defaultFilename() -> String {
