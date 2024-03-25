@@ -62,7 +62,6 @@ class VideoJoinModel: ObservableObject {
                 for i in 0..<identifiers.count {
                     self.videos.append(VideoItem(id: identifiers[i]))
                 }
-                
                 self.selected.removeAll()
             
                 Task {
@@ -72,8 +71,11 @@ class VideoJoinModel: ObservableObject {
                         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: fetchOptions)
                         log("Fetch result: \(fetchResult)")
                         if identifiers.count != fetchResult.count {
+                            DispatchQueue.main.async {
+                                self.videos.removeAll()
+                            }
                             throw err(
-                                "Failed to get \(selected.count - fetchResult.count) videos from Photo library. Please check that you have granted access to them.")
+                                "Failed to get \(identifiers.count - fetchResult.count) videos from Photo library. Please check that you have granted access to them.")
                         }
 
                         // Use a TaskGroup to concurrently fetch and process each video
@@ -328,7 +330,7 @@ class VideoJoinModel: ObservableObject {
     }
     
     func allLoaded() -> Bool {
-        return true
+        videos.filter({$0.video == nil}).count == 0
     }
     
     func handle(_ error: Error) {

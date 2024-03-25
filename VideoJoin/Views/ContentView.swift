@@ -49,6 +49,13 @@ struct ContentView: View {
             }
             .onAppear(perform: {
                 clearTemporaryFiles()
+                Task {
+                    let status = await model.requestAuthorization()
+                    if (!status) {
+                        model.errMsg = "You need to grant access to the photo library, otherwise the app will not work. Please open Settings->VideoJoin->Photos and set the access level."
+                        model.isError = true
+                    }
+                }
             })
             .photosPicker(isPresented: $showingPicker, selection: $model.selected,
                           selectionBehavior: PhotosPickerSelectionBehavior.ordered,
@@ -75,7 +82,10 @@ struct ContentView: View {
                     Button(action: mergeVideos ) {
                         Label("Merge Videos", systemImage: "figure.walk.motion")
                     }
-//                    .disabled(model.videos.count < 2 || !model.allLoaded())
+                    .disabled(model.videos.count < 2 || !model.allLoaded())
+
+                    EditButton()
+                        .disabled(model.videos.count < 1)
 
                     NavigationLink {
                         AboutView()
