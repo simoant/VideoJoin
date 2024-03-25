@@ -47,6 +47,9 @@ struct ContentView: View {
                     DetailedView(model: model, index: index)
                 }
             }
+            .onAppear(perform: {
+                clearTemporaryFiles()
+            })
             .photosPicker(isPresented: $showingPicker, selection: $model.selected,
                           selectionBehavior: PhotosPickerSelectionBehavior.ordered,
                           matching: .videos, photoLibrary: .shared())
@@ -54,9 +57,7 @@ struct ContentView: View {
             .alert("Error", isPresented: $model.isError) {
                 Button("OK", role: .cancel) { model.isError = false }
             } message: {
-                Text(model.errMsg).onAppear(perform: {
-                    log("\(model.mergeDisplayed)")
-                })
+                Text(model.errMsg)
             }
             .sheet(isPresented: $model.showMerge, content: {
                 MergedView(model: model)

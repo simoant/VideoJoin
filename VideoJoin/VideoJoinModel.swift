@@ -33,7 +33,7 @@ struct Video {
 struct MergedVideo {
     var url: URL?
     var composition: AVMutableComposition?
-    let fileSize: Int64?
+    var fileSize: Int64?
     var fileName: String?
 }
 
@@ -43,9 +43,10 @@ class VideoJoinModel: ObservableObject {
     @Published var errMsg = ""
     @Published var progress: Double = 0.0
     @Published var task: Task<(), Never>? = nil
-    @Published var mergeDisplayed = false
     
     @Published var showMerge = false
+    @Published var isSaving = false
+    @Published var isSharing = false
     
     @Published var selected = [PhotosPickerItem]()
     @Published var hiRes = true
@@ -61,6 +62,8 @@ class VideoJoinModel: ObservableObject {
                 for i in 0..<identifiers.count {
                     self.videos.append(VideoItem(id: identifiers[i]))
                 }
+                
+                self.selected.removeAll()
             
                 Task {
                     do {
@@ -68,7 +71,7 @@ class VideoJoinModel: ObservableObject {
                         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
                         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: fetchOptions)
                         log("Fetch result: \(fetchResult)")
-                        if selected.count != fetchResult.count {
+                        if identifiers.count != fetchResult.count {
                             throw err(
                                 "Failed to get \(selected.count - fetchResult.count) videos from Photo library. Please check that you have granted access to them.")
                         }
@@ -106,8 +109,6 @@ class VideoJoinModel: ObservableObject {
                         handle(error)
                     }
                 }
-            } catch {
-                handle(error)
             }
         }
     }
@@ -205,7 +206,7 @@ class VideoJoinModel: ObservableObject {
                 }
                 
                 DispatchQueue.main.async {
-                    self.mergedVideo = MergedVideo(url: nil, composition: composition, fileSize: nil, fileName: self.defaultFilename()) // Return both URL and file size
+                    self.mergedVideo = MergedVideo(url: nil, composition: composition, fileSize: nil, fileName: self.defaultFilename()) 
                 }
             } catch {
                 self.handle(error)
@@ -213,75 +214,107 @@ class VideoJoinModel: ObservableObject {
         }
     }
     
-    func save() {
-        Task {
-            do {
-                // Export to disk
-                
-                guard let composition = mergedVideo?.composition else {
-                    throw err("Videos composition is empty")
+    func requestAuthorization() async -> Bool {
+        let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+        return status == .authorized || status == .limited
+    }
+
+    func exportToPhotoLibrary(url: URL) async {
+        do {
+            let authorized = await requestAuthorization()
+            guard authorized else {
+                throw err("Photos library access not authorized")
+            }
+            
+            try await withCheckedThrowingContinuation { continuation in
+                PHPhotoLibrary.shared().performChanges({
+                    PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
+                }) { success, error in
+                    if success {
+                        continuation.resume()
+                    } else if let error = error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume(throwing: err("Unknown error occurred while exporting video to Photo library"))
+                    }
                 }
-                
-                guard let exportSession = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough) else {
-                    throw err("Could not create export session")
-                }
-                
-                guard let fileName = mergedVideo?.fileName else {
-                    throw err("File name is empty")
-                }
-                
-                let outputFileURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName + ".mov")
-                
-                exportSession.outputURL = outputFileURL
-                exportSession.outputFileType = .mov
-                let fileSize = try await exportSession.estimatedOutputFileLengthInBytes
-                log("Output url: \(outputFileURL)")
-                log("Output url: \(outputFileURL)")
-                
-                // Track progress
-                let timerHolder = TimerHolder()
-                DispatchQueue.main.async {
-                    timerHolder.timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-                        log("Timer")
-                        DispatchQueue.main.async {
-                            self.progress = Double(exportSession.progress)
-                            log("Updating progress \(exportSession.progress)")
-                            if exportSession.progress >= 1.0 || exportSession.status != .exporting {
-                                timerHolder.invalidate()
-                            }
+            }
+        } catch {
+            handle(error)
+        }
+    }
+    
+    func saveLocally() async -> URL? {
+        do {
+            // Export to disk
+            guard let composition = mergedVideo?.composition else {
+                throw err("Videos composition is empty")
+            }
+            
+            guard let exportSession = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough) else {
+                throw err("Could not create export session")
+            }
+            
+            guard let fileName = mergedVideo?.fileName else {
+                throw err("File name is empty")
+            }
+            
+            let outputFileURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName + ".mov")
+            
+            exportSession.outputURL = outputFileURL
+            exportSession.outputFileType = .mov
+            log("Output url: \(outputFileURL)")
+            
+            // Track progress
+            let timerHolder = TimerHolder()
+            DispatchQueue.main.async {
+                timerHolder.timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                    log("Timer")
+                    DispatchQueue.main.async {
+                        self.progress = Double(exportSession.progress)
+                        log("Updating progress \(exportSession.progress)")
+                        if exportSession.progress >= 1.0 || exportSession.status != .exporting {
+                            timerHolder.invalidate()
                         }
                     }
-                    // Ensure the timer is added to the main run loop and configured for common modes to allow it to fire while scrolling UI elements.
-                    RunLoop.main.add(timerHolder.timer!, forMode: .common)
                 }
-                
-                await exportSession.export()
-                switch exportSession.status {
-                case .failed, .cancelled:
-                    if let error = exportSession.error {
-                        throw err("Failed saving:\(error.localizedDescription)")
-                    } else {
-                        throw err("Sorry, something when wrong with saving merged video to temporary folder")
-                    }
-                default:
-                    break
-                }
-                
-                log("Exported")
-                // Get file size
-                let attributes = try FileManager.default.attributesOfItem(atPath: outputFileURL.path)
-                if let fileSize = attributes[.size] as? UInt64 {
-                    DispatchQueue.main.async {
-                        self.mergedVideo = MergedVideo(url: outputFileURL, fileSize: Int64(fileSize)) // Return both URL and file size
-                    }
-                } else {
-                    throw err("Could not fetch file size")
-                }
-            } catch {
-                handle(error)
+                // Ensure the timer is added to the main run loop and configured for common modes to allow it to fire while scrolling UI elements.
+                RunLoop.main.add(timerHolder.timer!, forMode: .common)
             }
+            
+            await exportSession.export()
+            switch exportSession.status {
+            case .failed, .cancelled:
+                if let error = exportSession.error {
+                    throw err("Sorry, something when wrong:\(error.localizedDescription)")
+                } else {
+                    throw err("Sorry, something when wrong with saving merged video to temporary folder")
+                }
+            default:
+                break
+            }
+            
+            log("Exported")
+            // Get file size
+            let attributes = try FileManager.default.attributesOfItem(atPath: outputFileURL.path)
+            if let fileSize = attributes[.size] as? UInt64 {
+                DispatchQueue.main.async {
+                    self.mergedVideo?.fileSize = Int64(fileSize)
+                }
+            } else {
+                log("Could not fetch file size")
+            }
+            DispatchQueue.main.async {
+                self.isSaving = false
+            }
+            return outputFileURL
+        } catch {
+            handle(error)
+            DispatchQueue.main.async {
+                self.isSaving = false
+            }
+            return nil
         }
-
     }
     
     func defaultFilename() -> String {
@@ -326,6 +359,17 @@ class VideoJoinModel: ObservableObject {
         }
     }
     
+    func validateFilename() -> Bool {
+        // Basic validation for filename (adjust regex according to your needs)
+        // This pattern checks for valid characters and the .mov extension
+        let pattern = "^[\\w\\-\\s\\:\\.]+$"
+    //    let pattern = "^[\\w\\-\\s\\:\\.]+\\.mov$"
+        guard let filename = mergedVideo?.fileName else { return false }
+        let result = filename.range(of: pattern, options: .regularExpression)
+        return result != nil
+    }
+
+    
     func longOp() {
         DispatchQueue.main.async {
             self.progress = 0.0
@@ -361,6 +405,7 @@ class VideoJoinModel: ObservableObject {
             }
         }
     }
+    
     
     class TimerHolder {
         var timer: Timer?

@@ -37,14 +37,6 @@ extension PHImageManager {
     }
 }
 
-func validateFilename(_ filename: String) -> Bool {
-    // Basic validation for filename (adjust regex according to your needs)
-    // This pattern checks for valid characters and the .mov extension
-    let pattern = "^[\\w\\-\\s\\:\\.]+$"
-//    let pattern = "^[\\w\\-\\s\\:\\.]+\\.mov$"
-    let result = filename.range(of: pattern, options: .regularExpression)
-    return result != nil
-}
 
 
 func clearTemporaryFiles() {

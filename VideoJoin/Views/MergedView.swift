@@ -9,27 +9,51 @@ import SwiftUI
 
 struct MergedView: View {
     @StateObject var model: VideoJoinModel
+    @StateObject var orientation: OrientationManager = OrientationManager()
     var body: some View {
-        NavigationView {
-            if (model.mergedVideo == nil) {
-                ProgressView(value: model.progress) {
-                    Text("Merging... \((model.progress * 100).formatted(.number))%" )
+        VStack {
+            if orientation.isLandscape {
+                if model.isSaving {
+                    progressView
+                } else {
+                    PreviewVideoPlayer(model: model)
+                        .edgesIgnoringSafeArea(.all)
                 }
-                .progressViewStyle(.linear)
-                .padding()
-                .navigationBarItems(
-                    leading: Button(action: {
-                        model.task?.cancel()
-                        model.showMerge = false
-                    }) {
-                        Image(systemName: "xmark")
-                    }
-                )
-                .navigationTitle("Merging...")
+
             } else {
-                MergedVideoView(model: model)
+                NavigationView {
+                    if (model.isSaving) {
+                        progressView
+                        .navigationTitle("Merging...")
+                        .navigationBarItems(
+                            leading: Button(action: {
+                                model.task?.cancel()
+                                model.showMerge = false
+                            }) {
+                                Image(systemName: "xmark")
+                            }
+                        )
+                    } else {
+                        MergedVideoView(model: model)
+                            .navigationTitle("Preview")
+                            .navigationBarItems(
+                                leading: Button(action: {
+                                    model.task?.cancel()
+                                    model.showMerge = false
+                                }) {
+                                    Image(systemName: "xmark")
+                                }
+                            )
+                    }
+                }
+                .padding()
             }
         }
+        .sheet(isPresented: $model.isSharing, content: {
+            if let shareURL = model.mergedVideo?.url {
+                ActivityView(activityItems: [shareURL], applicationActivities: nil)
+            }
+        })
         .alert("Error", isPresented: $model.isMergeError) {
             Button("OK", role: .cancel) {
                 model.isMergeError = false
@@ -38,15 +62,17 @@ struct MergedView: View {
         } message: {
             Text(model.errMsg)
         }
-        .onAppear(perform: {
-            log("Appeared")
-            model.mergeDisplayed = true
-        })
-        .onDisappear(perform: {
-            model.mergeDisplayed = false
-            log("Disappeared")
-        })
     }
+    
+    var progressView: some View {
+        ProgressView(value: model.progress) {
+            Text("Generating video... \((model.progress * 100).formatted(.number))%" )
+        }
+        .progressViewStyle(.linear)
+        .padding()
+    }
+
+    
 }
 
 #Preview {
