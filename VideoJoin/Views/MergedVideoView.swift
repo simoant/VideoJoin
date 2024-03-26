@@ -13,7 +13,6 @@ struct MergedVideoView: View {
     @StateObject var model: VideoJoinModel
     @FocusState private var filenameFocused: Bool
     @State var fileName = ""
-    @State var isSaved = false
 
     var body: some View {
         VStack {
@@ -67,14 +66,6 @@ struct MergedVideoView: View {
                     log("Failed to set audio session category. Error: \(error)")
                 }
             }
-            .alert("Success", isPresented: $isSaved) {
-                Button("OK", role: .cancel) {
-                    isSaved = false
-                    model.showMerge = false
-                }
-            } message: {
-                Text("Video saved!")
-            }
         }
     }
     
@@ -84,20 +75,20 @@ struct MergedVideoView: View {
     
     private func share() {
         if model.validateFilename() {
-            model.isSaving = true
+            model.savingInProgress = true
             Task {
                 if let url = await model.saveLocally() {
                     log("Start sharing with url: \(url)")
                     DispatchQueue.main.async {
                         model.mergedVideo?.url = url
-                        model.isSharing = true
+                        model.showShareView = true
                     }
                 } else {
                     log("Url is empty")
                 }
             }
         } else {
-            model.errMsg = "File name is empty."
+            model.errMsg = "Invalid file name."
             model.isMergeError = true
         }
     }
@@ -105,15 +96,26 @@ struct MergedVideoView: View {
     private func exportToPhotoLibrary() {
         if model.validateFilename() {
             Task {
-                if self.model.mergedVideo?.url == nil {
+                log("URL in export \(self.model.mergedVideo?.url)")
+                if let url = self.model.mergedVideo?.url {
+                    log("URL is not empty, exporting")
+                    await model.exportToPhotoLibrary(url: url)
+                    DispatchQueue.main.async {
+                        model.alertSaved = true
+                    }
+                } else {
+                    log("URL is empty, saving locally")
                     if let url = await model.saveLocally() {
                         await model.exportToPhotoLibrary(url: url)
                         DispatchQueue.main.async {
-                            isSaved = true
+                            model.alertSaved = true
                         }
                     }
                 }
             }
+        } else {
+            model.errMsg = "Invalid file name."
+            model.isMergeError = true
         }
     }
 }

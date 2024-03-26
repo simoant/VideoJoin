@@ -17,15 +17,17 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            if model.videos.isEmpty {
+            VStack {
                 if model.videos.isEmpty {
-                    EmptyView(model: model)
-                } else {
-                    Spacer()
-                    ProgressView("Loading ...")
-                    Spacer()
-                }
-            } else {
+                    if model.selected.isEmpty {
+                        EmptyView(model: model)
+                    } else {
+                        Spacer()
+                        ProgressView("Loading ...")
+                        Spacer()
+                    }
+                } 
+//                else {
                 List {
                     ForEach(0..<model.videos.count, id: \.self) { index in
                         if model.videos[index].video == nil {
@@ -38,9 +40,11 @@ struct ContentView: View {
                     }
                     .onMove(perform: move)
                     .onDelete(perform: delete)
+//                }
                 }
+                Spacer()
+                BottomView(model: VideoJoinModel())
             }
-            BottomView(model: VideoJoinModel())
             .navigationTitle("Merge Your Videos")
             .navigationDestination(for: Int.self) { index in
                 if model.videos[index].video != nil {
@@ -66,7 +70,7 @@ struct ContentView: View {
             } message: {
                 Text(model.errMsg)
             }
-            .sheet(isPresented: $model.showMerge, content: {
+            .sheet(isPresented: $model.showMergeView, content: {
                 MergedView(model: model)
             })
             .toolbar {

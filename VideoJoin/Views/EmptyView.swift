@@ -22,5 +22,6 @@ struct EmptyView: View {
             Spacer()
         }
         Spacer()
+        
     }
 }

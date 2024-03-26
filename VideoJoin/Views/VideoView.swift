@@ -63,13 +63,12 @@ struct VideoView: View {
                         }
                         
                     }
-                }
+                }.font(.footnote)
+                    .foregroundColor(.primary)
+                    .layoutPriority(1)
                 
-            }.font(.footnote)
-                .foregroundColor(.primary)
-                .layoutPriority(1)
+            }.padding(.vertical, 4)
         }
-
     }
 }
 

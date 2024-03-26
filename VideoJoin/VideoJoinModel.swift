@@ -44,9 +44,10 @@ class VideoJoinModel: ObservableObject {
     @Published var progress: Double = 0.0
     @Published var task: Task<(), Never>? = nil
     
-    @Published var showMerge = false
-    @Published var isSaving = false
-    @Published var isSharing = false
+    @Published var showMergeView = false
+    @Published var savingInProgress = false
+    @Published var showShareView = false
+    @Published var alertSaved = false
     
     @Published var selected = [PhotosPickerItem]()
     @Published var hiRes = true
@@ -169,9 +170,16 @@ class VideoJoinModel: ObservableObject {
         return asset
     }
     
+    func resetMerge() {
+        log("Reset merge")
+        task?.cancel()
+        showMergeView = false
+        mergedVideo = nil
+    }
+    
     func merge() {
         self.progress = 0.0
-        self.showMerge = true
+        self.showMergeView = true
 
         task = Task {
             let composition = AVMutableComposition()
@@ -185,6 +193,7 @@ class VideoJoinModel: ObservableObject {
 
                 
                 var insertTime = CMTime.zero
+                var fileSize: Int64 = 0
                 
                 //  Create composition
                 for video in self.videos.compactMap(\.video) {
@@ -205,10 +214,11 @@ class VideoJoinModel: ObservableObject {
                     } else { throw err("Failed loading video tracks") }
                     
                     insertTime = CMTimeAdd(insertTime, duration)
+                    fileSize += video.size
                 }
                 
                 DispatchQueue.main.async {
-                    self.mergedVideo = MergedVideo(url: nil, composition: composition, fileSize: nil, fileName: self.defaultFilename()) 
+                    self.mergedVideo = MergedVideo(url: nil, composition: composition, fileSize: fileSize, fileName: self.defaultFilename())
                 }
             } catch {
                 self.handle(error)
@@ -241,12 +251,16 @@ class VideoJoinModel: ObservableObject {
                     }
                 }
             }
+            log("Exported to Photo library")
         } catch {
             handle(error)
         }
     }
     
     func saveLocally() async -> URL? {
+        DispatchQueue.main.async {
+            self.savingInProgress = true
+        }
         do {
             // Export to disk
             guard let composition = mergedVideo?.composition else {
@@ -260,6 +274,8 @@ class VideoJoinModel: ObservableObject {
             guard let fileName = mergedVideo?.fileName else {
                 throw err("File name is empty")
             }
+            
+            clearTemporaryFiles()
             
             let outputFileURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName + ".mov")
             
@@ -307,13 +323,15 @@ class VideoJoinModel: ObservableObject {
                 log("Could not fetch file size")
             }
             DispatchQueue.main.async {
-                self.isSaving = false
+                self.savingInProgress = false
+                self.mergedVideo?.url = outputFileURL
             }
             return outputFileURL
         } catch {
             handle(error)
             DispatchQueue.main.async {
-                self.isSaving = false
+                self.savingInProgress = false
+                self.mergedVideo?.url = nil
             }
             return nil
         }
@@ -353,7 +371,7 @@ class VideoJoinModel: ObservableObject {
                 log(self.errMsg) // Similarly, ensure 'errMsg' is accessible and 'log' can be called like this.
             }
 //            self.showMerge = false
-            if self.showMerge {
+            if self.showMergeView {
                 self.isMergeError = true
             } else {
                 self.isError = true
@@ -375,7 +393,7 @@ class VideoJoinModel: ObservableObject {
     func longOp() {
         DispatchQueue.main.async {
             self.progress = 0.0
-            self.showMerge = true
+            self.showMergeView = true
         }
         
         let totalSteps = 100
@@ -397,13 +415,13 @@ class VideoJoinModel: ObservableObject {
                 }
             } catch {
                 DispatchQueue.main.async {
-                    self.showMerge = false
+                    self.showMergeView = false
                     self.isError = true
                     self.errMsg = error.localizedDescription
                 }
             }
             DispatchQueue.main.async {
-                self.showMerge = false
+                self.showMergeView = false
             }
         }
     }

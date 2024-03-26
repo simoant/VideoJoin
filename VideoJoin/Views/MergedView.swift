@@ -13,7 +13,7 @@ struct MergedView: View {
     var body: some View {
         VStack {
             if orientation.isLandscape {
-                if model.isSaving {
+                if model.savingInProgress {
                     progressView
                 } else {
                     PreviewVideoPlayer(model: model)
@@ -22,13 +22,12 @@ struct MergedView: View {
 
             } else {
                 NavigationView {
-                    if (model.isSaving) {
+                    if (model.savingInProgress) {
                         progressView
                         .navigationTitle("Merging...")
                         .navigationBarItems(
                             leading: Button(action: {
-                                model.task?.cancel()
-                                model.showMerge = false
+                                model.resetMerge()
                             }) {
                                 Image(systemName: "xmark")
                             }
@@ -38,8 +37,7 @@ struct MergedView: View {
                             .navigationTitle("Preview")
                             .navigationBarItems(
                                 leading: Button(action: {
-                                    model.task?.cancel()
-                                    model.showMerge = false
+                                    model.resetMerge()
                                 }) {
                                     Image(systemName: "xmark")
                                 }
@@ -49,7 +47,7 @@ struct MergedView: View {
                 .padding()
             }
         }
-        .sheet(isPresented: $model.isSharing, content: {
+        .sheet(isPresented: $model.showShareView, content: {
             if let shareURL = model.mergedVideo?.url {
                 ActivityView(activityItems: [shareURL], applicationActivities: nil)
             }
@@ -57,16 +55,24 @@ struct MergedView: View {
         .alert("Error", isPresented: $model.isMergeError) {
             Button("OK", role: .cancel) {
                 model.isMergeError = false
-                model.showMerge = false
+                model.resetMerge()
             }
         } message: {
             Text(model.errMsg)
         }
+        .alert("Success", isPresented: $model.alertSaved) {
+            Button("OK", role: .cancel) {
+                model.alertSaved = false
+            }
+        } message: {
+            Text("Video saved!")
+        }
+
     }
     
     var progressView: some View {
         ProgressView(value: model.progress) {
-            Text("Generating video... \((model.progress * 100).formatted(.number))%" )
+            Text("Processing... \((Int(model.progress * 100)).formatted(.number))%" )
         }
         .progressViewStyle(.linear)
         .padding()
