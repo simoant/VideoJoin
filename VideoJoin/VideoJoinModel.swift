@@ -57,59 +57,8 @@ class VideoJoinModel: ObservableObject {
     @Published var mergedVideo: MergedVideo? = nil
     @Published var isPurchased = false
     
-    let maxFreeVideos = 2
+    let maxFreeVideos = 10
     
-    @MainActor
-    func clear() {
-        self.videos.removeAll()
-    }
-    
-    @MainActor
-    func setVideo(video: Video, i: Int) {
-        self.videos[i].video = video
-    }
-
-    @MainActor
-    func setDownloadProgress(progress: Double, i: Int) {
-        self.videos[i].downloadProgress = progress
-    }
-    
-    @MainActor
-    func raiseAlertSaved() {
-        self.alertSaved = true
-    }
-    
-    @MainActor
-    func displayShareView() {
-//        mergedVideo?.url = url
-        self.showShareView = true
-    }
-    
-    @MainActor
-    func setMergedVideo(mergedVideo: MergedVideo) {
-        self.mergedVideo = mergedVideo
-    }
-    
-    @MainActor
-    func setSavingInProgress() {
-        self.savingInProgress = true
-    }
-    
-    @MainActor
-    func setExportSession(exportSession: AVAssetExportSession) {
-        self.exportSession = exportSession
-    }
-    
-    @MainActor
-    func setMergedVideoFileSize(fileSize: Int64) {
-        self.mergedVideo?.fileSize = fileSize
-    }
-    
-    @MainActor
-    func finishSaving(url: URL?) {
-        self.savingInProgress = false
-        self.mergedVideo?.url = url
-    }
     
     func addVideos() {
         if !selected.isEmpty {
@@ -467,4 +416,57 @@ class VideoJoinModel: ObservableObject {
             }
         }
     }
+    
+    @MainActor
+    func clear() {
+        self.videos.removeAll()
+    }
+    
+    @MainActor
+    func setVideo(video: Video, i: Int) {
+        self.videos[i].video = video
+    }
+
+    @MainActor
+    func setDownloadProgress(progress: Double, i: Int) {
+        self.videos[i].downloadProgress = progress
+    }
+    
+    @MainActor
+    func raiseAlertSaved() {
+        self.alertSaved = true
+    }
+    
+    @MainActor
+    func displayShareView() {
+//        mergedVideo?.url = url
+        self.showShareView = true
+    }
+    
+    @MainActor
+    func setMergedVideo(mergedVideo: MergedVideo) {
+        self.mergedVideo = mergedVideo
+    }
+    
+    @MainActor
+    func setSavingInProgress() {
+        self.savingInProgress = true
+    }
+    
+    @MainActor
+    func setExportSession(exportSession: AVAssetExportSession) {
+        self.exportSession = exportSession
+    }
+    
+    @MainActor
+    func setMergedVideoFileSize(fileSize: Int64) {
+        self.mergedVideo?.fileSize = fileSize
+    }
+    
+    @MainActor
+    func finishSaving(url: URL?) {
+        self.savingInProgress = false
+        self.mergedVideo?.url = url
+    }
+
 }
