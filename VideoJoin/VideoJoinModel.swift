@@ -48,12 +48,16 @@ class VideoJoinModel: ObservableObject {
     @Published var showMergeView = false
     @Published var savingInProgress = false
     @Published var showShareView = false
+    @Published var showPurchaseView = false
     @Published var alertSaved = false
     
     @Published var selected = [PhotosPickerItem]()
     @Published var hiRes = true
     @Published var videos = [VideoItem]()
     @Published var mergedVideo: MergedVideo? = nil
+    @Published var isPurchased = false
+    
+    let maxFreeVideos = 2
     
     func clear() {
         self.videos.removeAll()
@@ -69,63 +73,72 @@ class VideoJoinModel: ObservableObject {
     
     func addVideos() {
         if !selected.isEmpty {
-            do {
-                log("Selected videos: \(selected.count)")
-                let identifiers = selected.compactMap(\.itemIdentifier)
-                                
-                for i in 0..<identifiers.count {
-                    self.videos.append(VideoItem(id: identifiers[i]))
-                }
-                self.selected.removeAll()
-            
-                Task {
-                    do {
-                        let fetchOptions = PHFetchOptions()
-                        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
-                        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: fetchOptions)
-                        log("Fetch result: \(fetchResult)")
-                        if identifiers.count != fetchResult.count {
-                            DispatchQueue.main.async {
-                                self.clear()
-                            }
-                            throw err(
-                                "Failed to get \(identifiers.count - fetchResult.count) videos from Photo library. Please check that you have granted access to them.")
+            Task {
+                do {
+                    log("Selected videos: \(selected.count)")
+                    
+                    log("Purchased: \(isPurchased)")
+                    if selected.count + videos.count > maxFreeVideos && !isPurchased {
+                        await MainActor.run {
+                            self.showPurchaseView = true
                         }
-
-                        // Use a TaskGroup to concurrently fetch and process each video
-                        await withTaskGroup(of: (Video?, Int).self) { group in
-                            log("inside grouo task \(self.videos.count)")
-                            for i in 0..<self.videos.count {
-                                group.addTask {
-                                    do {
-                                        let phAsset = fetchResult.object(at: i)
-                                        let video = try await self.getVideo(phAsset: phAsset, progressHandler: { progress in
-                                            DispatchQueue.main.async {
-                                                self.setDownloadProgress(progress: progress, i: i)
-                                            }
-                                        })
-                                        return (video, i)
-                                    }
-                                    catch {
-                                        self.handle(error)
-                                        return (nil, i)
-                                    }
-                                }
-                            }
-                            for await (video, i) in group {
-                                if video == nil {
-                                    log("Videos is empty")
-                                }
-                                DispatchQueue.main.async {
-                                    if let video = video {
-                                        self.setVideo(video: video, i: i)
-                                    }
-                                }
-                            }
-                        }
-                    } catch {
-                        handle(error)
+                        return
                     }
+
+                    let identifiers = selected.compactMap(\.itemIdentifier)
+                        
+                    await MainActor.run {
+                        for i in 0..<identifiers.count {
+                            self.videos.append(VideoItem(id: identifiers[i]))
+                        }
+                        self.selected.removeAll()
+                    }
+                
+                    let fetchOptions = PHFetchOptions()
+                    fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
+                    let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: fetchOptions)
+                    log("Fetch result: \(fetchResult)")
+                    if identifiers.count != fetchResult.count {
+                        DispatchQueue.main.async {
+                            self.clear()
+                        }
+                        throw err(
+                            "Failed to get \(identifiers.count - fetchResult.count) videos from Photo library. Please check that you have granted access to them.")
+                    }
+
+                    // Use a TaskGroup to concurrently fetch and process each video
+                    await withTaskGroup(of: (Video?, Int).self) { group in
+                        log("inside grouo task \(self.videos.count)")
+                        for i in 0..<self.videos.count {
+                            group.addTask {
+                                do {
+                                    let phAsset = fetchResult.object(at: i)
+                                    let video = try await self.getVideo(phAsset: phAsset, progressHandler: { progress in
+                                        DispatchQueue.main.async {
+                                            self.setDownloadProgress(progress: progress, i: i)
+                                        }
+                                    })
+                                    return (video, i)
+                                }
+                                catch {
+                                    self.handle(error)
+                                    return (nil, i)
+                                }
+                            }
+                        }
+                        for await (video, i) in group {
+                            if video == nil {
+                                log("Videos is empty")
+                            }
+                            DispatchQueue.main.async {
+                                if let video = video {
+                                    self.setVideo(video: video, i: i)
+                                }
+                            }
+                        }
+                    }
+                } catch {
+                    handle(error)
                 }
             }
         }

@@ -8,12 +8,16 @@
 import SwiftUI
 import PhotosUI
 import SwiftData
+import StoreKit
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var items: [Item]
-    @State private var showingPicker = false
+    
     @StateObject var model = VideoJoinModel()
+    @StateObject var skit = StoreKitManager()
+    
+    @State private var showingPicker = false
 
     var body: some View {
         NavigationStack {
@@ -61,18 +65,32 @@ struct ContentView: View {
                     }
                 }
             })
+            //  Photo Picker
             .photosPicker(isPresented: $showingPicker, selection: $model.selected,
                           selectionBehavior: PhotosPickerSelectionBehavior.ordered,
                           matching: .videos, photoLibrary: .shared())
             .onChange(of: model.selected) { addVideos() }
+            //  Error
             .alert("Error", isPresented: $model.isError) {
                 Button("OK", role: .cancel) { model.isError = false }
             } message: {
                 Text(model.errMsg)
             }
+            //  Merge View
             .sheet(isPresented: $model.showMergeView, content: {
                 MergedView(model: model)
             })
+
+            //  StoreKit
+            .alert("Limited version", isPresented: $model.showPurchaseView ) {
+                Button("OK", role: .none) { purchase() }
+                Button("Restore purchase", role: .none) { restorePurchase() }
+                Button("Cancel", role: .cancel) { cancelPurchase() }
+            } message: {
+                Text("Current free version serves for evaluation purposes only and allows to merge only \(model.maxFreeVideos) videos at a time. Do you want to buy Full version?")
+            }
+            .onChange(of: skit.purchased) { purchaseChanged() }
+            //  Toolbar
             .toolbar {
                 ToolbarItemGroup(placement: .automatic) {
                     Button(action: showVideoPicker) {
@@ -99,6 +117,52 @@ struct ContentView: View {
                 }
             }
         }
+    }
+    
+    private func purchase() {
+        Task {
+            guard let product = skit.storeProducts.first else {
+                log("Product not found");
+                await MainActor.run {
+                    self.model.selected.removeAll()
+                    self.model.errMsg = "Product not found. Pls contact the developer"
+                    self.model.isError = true
+                }
+                return
+            }
+
+            try await skit.purchase(product)
+
+            if skit.purchased.count > 0 {
+                addVideos()
+            } else {
+                await MainActor.run {
+                    self.model.selected.removeAll()
+                    self.model.errMsg = "Sorry, something when wrong, transaction failed."
+                    self.model.isError = true
+                }
+            }
+        }
+        model.showPurchaseView = false
+    }
+    
+    private func purchaseChanged() {
+        log("Purchase changed")
+        guard let product = skit.storeProducts.first else { log("Product not found"); return }
+        self.model.isPurchased = self.skit.isPurchased(product)
+    }
+
+    private func restorePurchase() {
+        Task {
+            try? await AppStore.sync()
+            addVideos()
+        }
+        model.showPurchaseView = false
+    }
+    
+    private func cancelPurchase() {
+        model.selected.removeAll()
+        model.showPurchaseView = false
     }
     
     private func mergeVideos() {

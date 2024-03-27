@@ -14,8 +14,8 @@
             filePath = "VideoJoin/VideoJoinModel.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "184"
-            endingLineNumber = "184"
+            startingLineNumber = "197"
+            endingLineNumber = "197"
             landmarkName = "getAvAsset(_:progressHandler:)"
             landmarkType = "7">
          </BreakpointContent>

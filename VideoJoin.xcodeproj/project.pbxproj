@@ -26,6 +26,9 @@
 		3A275EE92BB0650000F6D50D /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A275EE82BB0650000F6D50D /* Utils.swift */; };
 		3A9D2EBD2BB1B8A300461FF6 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3A9D2EBC2BB1B8A300461FF6 /* Launch Screen.storyboard */; };
 		3A9D2EC02BB31B3000461FF6 /* ProgressModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9D2EBF2BB31B3000461FF6 /* ProgressModel.swift */; };
+		3A9D2EC22BB47C3F00461FF6 /* products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 3A9D2EC12BB47C3F00461FF6 /* products.storekit */; };
+		3A9D2EC42BB47C4900461FF6 /* products.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3A9D2EC32BB47C4900461FF6 /* products.plist */; };
+		3A9D2EC62BB47D0600461FF6 /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9D2EC52BB47D0600461FF6 /* StoreKitManager.swift */; };
 		3A9F0DFF2BB0AC4500EBAC8D /* BottomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9F0DFE2BB0AC4500EBAC8D /* BottomView.swift */; };
 		3A9F0E012BB0CD6000EBAC8D /* MergedVideoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9F0E002BB0CD6000EBAC8D /* MergedVideoView.swift */; };
 		3AAEFD392BB18707000A89B4 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AAEFD382BB18707000A89B4 /* ActivityView.swift */; };
@@ -75,6 +78,9 @@
 		3A9D2EBC2BB1B8A300461FF6 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 		3A9D2EBE2BB20BCC00461FF6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		3A9D2EBF2BB31B3000461FF6 /* ProgressModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressModel.swift; sourceTree = "<group>"; };
+		3A9D2EC12BB47C3F00461FF6 /* products.storekit */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = products.storekit; sourceTree = "<group>"; };
+		3A9D2EC32BB47C4900461FF6 /* products.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = products.plist; sourceTree = "<group>"; };
+		3A9D2EC52BB47D0600461FF6 /* StoreKitManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StoreKitManager.swift; sourceTree = "<group>"; };
 		3A9F0DFE2BB0AC4500EBAC8D /* BottomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomView.swift; sourceTree = "<group>"; };
 		3A9F0E002BB0CD6000EBAC8D /* MergedVideoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MergedVideoView.swift; sourceTree = "<group>"; };
 		3AAEFD382BB18707000A89B4 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
@@ -134,6 +140,7 @@
 				3A9D2EBE2BB20BCC00461FF6 /* Info.plist */,
 				3A275ED72BAF765100F6D50D /* Views */,
 				3A275EAB2BAF762100F6D50D /* VideoJoinApp.swift */,
+				3A9D2EC52BB47D0600461FF6 /* StoreKitManager.swift */,
 				3A275EAF2BAF762100F6D50D /* Item.swift */,
 				3A275EB12BAF762200F6D50D /* Assets.xcassets */,
 				3A275EB32BAF762200F6D50D /* Preview Content */,
@@ -144,6 +151,8 @@
 				3AAEFD3E2BB1B052000A89B4 /* PlayerObserver.swift */,
 				3A9D2EBC2BB1B8A300461FF6 /* Launch Screen.storyboard */,
 				3A9D2EBF2BB31B3000461FF6 /* ProgressModel.swift */,
+				3A9D2EC12BB47C3F00461FF6 /* products.storekit */,
+				3A9D2EC32BB47C4900461FF6 /* products.plist */,
 			);
 			path = VideoJoin;
 			sourceTree = "<group>";
@@ -295,6 +304,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3A9D2EC22BB47C3F00461FF6 /* products.storekit in Resources */,
+				3A9D2EC42BB47C4900461FF6 /* products.plist in Resources */,
 				3A9D2EBD2BB1B8A300461FF6 /* Launch Screen.storyboard in Resources */,
 				3A275EB52BAF762200F6D50D /* Preview Assets.xcassets in Resources */,
 				3A275EB22BAF762200F6D50D /* Assets.xcassets in Resources */,
@@ -326,6 +337,7 @@
 				3A275EE72BB0621800F6D50D /* MergedView.swift in Sources */,
 				3A275EAE2BAF762100F6D50D /* ContentView.swift in Sources */,
 				3A275EDF2BB052AB00F6D50D /* VideoView.swift in Sources */,
+				3A9D2EC62BB47D0600461FF6 /* StoreKitManager.swift in Sources */,
 				3A275EDB2BAF7BF500F6D50D /* EmptyView.swift in Sources */,
 				3A275EB02BAF762100F6D50D /* Item.swift in Sources */,
 				3AAEFD3F2BB1B052000A89B4 /* PlayerObserver.swift in Sources */,
@@ -508,6 +520,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VideoJoin/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "The app needs to access your photo library to read videos to merge and store the resulting video";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "The app needs to access your photo library to read videos to merge and store the resulting video";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -541,6 +554,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VideoJoin/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "The app needs to access your photo library to read videos to merge and store the resulting video";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "The app needs to access your photo library to read videos to merge and store the resulting video";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
