@@ -9,7 +9,21 @@ import SwiftUI
 
 struct MergedView: View {
     @StateObject var model: VideoJoinModel
-    @StateObject var orientation: OrientationManager = OrientationManager()
+    @StateObject var orientation: OrientationManager
+    @StateObject var timer: ProgressModel
+    
+    init(model: VideoJoinModel) {
+        self._model = StateObject(wrappedValue: model)
+        self._orientation = StateObject(wrappedValue: OrientationManager())
+        let timer = ProgressModel(
+            progress: 0.0,
+            progressSupplier: {
+                return Double(model.exportSession?.progress ?? 0.0)
+            }
+        )
+        self._timer = StateObject(wrappedValue: timer)
+    }
+    
     var body: some View {
         VStack {
             if orientation.isLandscape {
@@ -33,7 +47,7 @@ struct MergedView: View {
                             }
                         )
                     } else {
-                        MergedVideoView(model: model)
+                        MergedVideoView(model: model, timer: timer)
                             .navigationTitle("Preview")
                             .navigationBarItems(
                                 leading: Button(action: {
@@ -71,11 +85,22 @@ struct MergedView: View {
     }
     
     var progressView: some View {
-        ProgressView(value: model.progress) {
-            Text("Processing... \((Int(model.progress * 100)).formatted(.number))%" )
+        VStack {
+            Button("Start") {
+                timer.startTrackingProgress()
+            }
+            ProgressView(value: model.progress) {
+                Text("Processing... \((Int(model.progress * 100)).formatted(.number))%" )
+            }
+            .progressViewStyle(.linear)
+            .padding()
+            
+            ProgressView(value: timer.progress) {
+                Text("Processing... \((Int((timer.progress) * 100)).formatted(.number))%" )
+            }
+            .progressViewStyle(.linear)
+            .padding()
         }
-        .progressViewStyle(.linear)
-        .padding()
     }
 
     

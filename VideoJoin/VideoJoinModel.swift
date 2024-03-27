@@ -42,6 +42,7 @@ class VideoJoinModel: ObservableObject {
     @Published var isMergeError = false
     @Published var errMsg = ""
     @Published var progress: Double = 0.0
+    @Published var exportSession: AVAssetExportSession? = nil
     @Published var task: Task<(), Never>? = nil
     
     @Published var showMergeView = false
@@ -53,6 +54,18 @@ class VideoJoinModel: ObservableObject {
     @Published var hiRes = true
     @Published var videos = [VideoItem]()
     @Published var mergedVideo: MergedVideo? = nil
+    
+    func clear() {
+        self.videos.removeAll()
+    }
+    
+    func setVideo(video: Video, i: Int) {
+        self.videos[i].video = video
+    }
+
+    func setDownloadProgress(progress: Double, i: Int) {
+        self.videos[i].downloadProgress = progress
+    }
     
     func addVideos() {
         if !selected.isEmpty {
@@ -73,7 +86,7 @@ class VideoJoinModel: ObservableObject {
                         log("Fetch result: \(fetchResult)")
                         if identifiers.count != fetchResult.count {
                             DispatchQueue.main.async {
-                                self.videos.removeAll()
+                                self.clear()
                             }
                             throw err(
                                 "Failed to get \(identifiers.count - fetchResult.count) videos from Photo library. Please check that you have granted access to them.")
@@ -87,7 +100,9 @@ class VideoJoinModel: ObservableObject {
                                     do {
                                         let phAsset = fetchResult.object(at: i)
                                         let video = try await self.getVideo(phAsset: phAsset, progressHandler: { progress in
-                                            self.videos[i].downloadProgress = progress
+                                            DispatchQueue.main.async {
+                                                self.setDownloadProgress(progress: progress, i: i)
+                                            }
                                         })
                                         return (video, i)
                                     }
@@ -103,7 +118,7 @@ class VideoJoinModel: ObservableObject {
                                 }
                                 DispatchQueue.main.async {
                                     if let video = video {
-                                        self.videos[i].video = video
+                                        self.setVideo(video: video, i: i)
                                     }
                                 }
                             }
@@ -257,7 +272,7 @@ class VideoJoinModel: ObservableObject {
         }
     }
     
-    func saveLocally() async -> URL? {
+    func saveLocally(timer: ProgressModel) async -> URL? {
         DispatchQueue.main.async {
             self.savingInProgress = true
         }
@@ -283,22 +298,12 @@ class VideoJoinModel: ObservableObject {
             exportSession.outputFileType = .mov
             log("Output url: \(outputFileURL)")
             
-            // Track progress
-            let timerHolder = TimerHolder()
             DispatchQueue.main.async {
-                timerHolder.timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-                    log("Timer")
-                    DispatchQueue.main.async {
-                        self.progress = Double(exportSession.progress)
-                        log("Updating progress \(exportSession.progress)")
-                        if exportSession.progress >= 1.0 || exportSession.status != .exporting {
-                            timerHolder.invalidate()
-                        }
-                    }
-                }
-                // Ensure the timer is added to the main run loop and configured for common modes to allow it to fire while scrolling UI elements.
-                RunLoop.main.add(timerHolder.timer!, forMode: .common)
+                self.exportSession = exportSession
             }
+            
+            // Track progress
+            await timer.startTrackingProgress()
             
             await exportSession.export()
             switch exportSession.status {
@@ -423,16 +428,6 @@ class VideoJoinModel: ObservableObject {
             DispatchQueue.main.async {
                 self.showMergeView = false
             }
-        }
-    }
-    
-    
-    class TimerHolder {
-        var timer: Timer?
-
-        func invalidate() {
-            timer?.invalidate()
-            timer = nil
         }
     }
 }

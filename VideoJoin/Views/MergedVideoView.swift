@@ -11,6 +11,7 @@ import AVKit
 
 struct MergedVideoView: View {
     @StateObject var model: VideoJoinModel
+    @StateObject var timer: ProgressModel
     @FocusState private var filenameFocused: Bool
     @State var fileName = ""
 
@@ -76,8 +77,8 @@ struct MergedVideoView: View {
     private func share() {
         if model.validateFilename() {
             model.savingInProgress = true
-            Task {
-                if let url = await model.saveLocally() {
+            Task(priority: .userInitiated) {
+                if let url = await model.saveLocally(timer: self.timer) {
                     log("Start sharing with url: \(url)")
                     DispatchQueue.main.async {
                         model.mergedVideo?.url = url
@@ -105,7 +106,7 @@ struct MergedVideoView: View {
                     }
                 } else {
                     log("URL is empty, saving locally")
-                    if let url = await model.saveLocally() {
+                    if let url = await model.saveLocally(timer: self.timer) {
                         await model.exportToPhotoLibrary(url: url)
                         DispatchQueue.main.async {
                             model.alertSaved = true
@@ -120,6 +121,6 @@ struct MergedVideoView: View {
     }
 }
 
-#Preview {
-    MergedVideoView(model: VideoJoinModel())
-}
+//#Preview {
+//    MergedVideoView(model: VideoJoinModel(), timer: TimerM)
+//}

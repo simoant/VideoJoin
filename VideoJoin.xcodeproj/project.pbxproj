@@ -25,6 +25,7 @@
 		3A275EE72BB0621800F6D50D /* MergedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A275EE62BB0621800F6D50D /* MergedView.swift */; };
 		3A275EE92BB0650000F6D50D /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A275EE82BB0650000F6D50D /* Utils.swift */; };
 		3A9D2EBD2BB1B8A300461FF6 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3A9D2EBC2BB1B8A300461FF6 /* Launch Screen.storyboard */; };
+		3A9D2EC02BB31B3000461FF6 /* ProgressModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9D2EBF2BB31B3000461FF6 /* ProgressModel.swift */; };
 		3A9F0DFF2BB0AC4500EBAC8D /* BottomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9F0DFE2BB0AC4500EBAC8D /* BottomView.swift */; };
 		3A9F0E012BB0CD6000EBAC8D /* MergedVideoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9F0E002BB0CD6000EBAC8D /* MergedVideoView.swift */; };
 		3AAEFD392BB18707000A89B4 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AAEFD382BB18707000A89B4 /* ActivityView.swift */; };
@@ -73,6 +74,7 @@
 		3A275EE82BB0650000F6D50D /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
 		3A9D2EBC2BB1B8A300461FF6 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 		3A9D2EBE2BB20BCC00461FF6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		3A9D2EBF2BB31B3000461FF6 /* ProgressModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressModel.swift; sourceTree = "<group>"; };
 		3A9F0DFE2BB0AC4500EBAC8D /* BottomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomView.swift; sourceTree = "<group>"; };
 		3A9F0E002BB0CD6000EBAC8D /* MergedVideoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MergedVideoView.swift; sourceTree = "<group>"; };
 		3AAEFD382BB18707000A89B4 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
@@ -141,6 +143,7 @@
 				3AAEFD3A2BB1A5AB000A89B4 /* OrientationManager.swift */,
 				3AAEFD3E2BB1B052000A89B4 /* PlayerObserver.swift */,
 				3A9D2EBC2BB1B8A300461FF6 /* Launch Screen.storyboard */,
+				3A9D2EBF2BB31B3000461FF6 /* ProgressModel.swift */,
 			);
 			path = VideoJoin;
 			sourceTree = "<group>";
@@ -334,6 +337,7 @@
 				3A275EE52BB060EE00F6D50D /* Errors.swift in Sources */,
 				3A275EDD2BB0523600F6D50D /* LoadingVideoView.swift in Sources */,
 				3A275EAC2BAF762100F6D50D /* VideoJoinApp.swift in Sources */,
+				3A9D2EC02BB31B3000461FF6 /* ProgressModel.swift in Sources */,
 				3A275ED92BAF769200F6D50D /* VideoJoinModel.swift in Sources */,
 				3AAEFD3D2BB1A756000A89B4 /* PreviewVideoPlayer.swift in Sources */,
 				3A275EE92BB0650000F6D50D /* Utils.swift in Sources */,
@@ -504,7 +508,6 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VideoJoin/Info.plist;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "The app needs to access your photo library to read videos to merge and store the resulting video";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "The app needs to access your photo library to read videos to merge and store the resulting video";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -538,7 +541,6 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VideoJoin/Info.plist;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "The app needs to access your photo library to read videos to merge and store the resulting video";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "The app needs to access your photo library to read videos to merge and store the resulting video";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
