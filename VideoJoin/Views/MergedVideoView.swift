@@ -80,10 +80,7 @@ struct MergedVideoView: View {
             Task(priority: .userInitiated) {
                 if let url = await model.saveLocally(timer: self.timer) {
                     log("Start sharing with url: \(url)")
-                    DispatchQueue.main.async {
-                        model.mergedVideo?.url = url
-                        model.showShareView = true
-                    }
+                    model.displayShareView()
                 } else {
                     log("Url is empty")
                 }
@@ -101,16 +98,12 @@ struct MergedVideoView: View {
                 if let url = self.model.mergedVideo?.url {
                     log("URL is not empty, exporting")
                     await model.exportToPhotoLibrary(url: url)
-                    DispatchQueue.main.async {
-                        model.alertSaved = true
-                    }
+                    model.raiseAlertSaved()
                 } else {
                     log("URL is empty, saving locally")
                     if let url = await model.saveLocally(timer: self.timer) {
                         await model.exportToPhotoLibrary(url: url)
-                        DispatchQueue.main.async {
-                            model.alertSaved = true
-                        }
+                        model.raiseAlertSaved()
                     }
                 }
             }

@@ -59,16 +59,56 @@ class VideoJoinModel: ObservableObject {
     
     let maxFreeVideos = 2
     
+    @MainActor
     func clear() {
         self.videos.removeAll()
     }
     
+    @MainActor
     func setVideo(video: Video, i: Int) {
         self.videos[i].video = video
     }
 
+    @MainActor
     func setDownloadProgress(progress: Double, i: Int) {
         self.videos[i].downloadProgress = progress
+    }
+    
+    @MainActor
+    func raiseAlertSaved() {
+        self.alertSaved = true
+    }
+    
+    @MainActor
+    func displayShareView() {
+//        mergedVideo?.url = url
+        self.showShareView = true
+    }
+    
+    @MainActor
+    func setMergedVideo(mergedVideo: MergedVideo) {
+        self.mergedVideo = mergedVideo
+    }
+    
+    @MainActor
+    func setSavingInProgress() {
+        self.savingInProgress = true
+    }
+    
+    @MainActor
+    func setExportSession(exportSession: AVAssetExportSession) {
+        self.exportSession = exportSession
+    }
+    
+    @MainActor
+    func setMergedVideoFileSize(fileSize: Int64) {
+        self.mergedVideo?.fileSize = fileSize
+    }
+    
+    @MainActor
+    func finishSaving(url: URL?) {
+        self.savingInProgress = false
+        self.mergedVideo?.url = url
     }
     
     func addVideos() {
@@ -99,9 +139,7 @@ class VideoJoinModel: ObservableObject {
                     let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: fetchOptions)
                     log("Fetch result: \(fetchResult)")
                     if identifiers.count != fetchResult.count {
-                        DispatchQueue.main.async {
-                            self.clear()
-                        }
+                        await self.clear()
                         throw err(
                             "Failed to get \(identifiers.count - fetchResult.count) videos from Photo library. Please check that you have granted access to them.")
                     }
@@ -114,9 +152,7 @@ class VideoJoinModel: ObservableObject {
                                 do {
                                     let phAsset = fetchResult.object(at: i)
                                     let video = try await self.getVideo(phAsset: phAsset, progressHandler: { progress in
-                                        DispatchQueue.main.async {
-                                            self.setDownloadProgress(progress: progress, i: i)
-                                        }
+                                        Task { await self.setDownloadProgress(progress: progress, i: i) }
                                     })
                                     return (video, i)
                                 }
@@ -127,14 +163,8 @@ class VideoJoinModel: ObservableObject {
                             }
                         }
                         for await (video, i) in group {
-                            if video == nil {
-                                log("Videos is empty")
-                            }
-                            DispatchQueue.main.async {
-                                if let video = video {
-                                    self.setVideo(video: video, i: i)
-                                }
-                            }
+                            guard let video = video else { log("Videos is empty"); continue }
+                            await self.setVideo(video: video, i: i)
                         }
                     }
                 } catch {
@@ -189,9 +219,7 @@ class VideoJoinModel: ObservableObject {
                 self.handle(e)
                 return
             }
-            DispatchQueue.main.async {
-                progressHandler(progress)
-            }
+            Task { await MainActor.run { progressHandler(progress) } }
         }
         
         let (asset, _, _) = await PHImageManager.default().requestAVAssetAsync(forVideo: phAsset, options: options)
@@ -245,9 +273,13 @@ class VideoJoinModel: ObservableObject {
                     fileSize += video.size
                 }
                 
-                DispatchQueue.main.async {
-                    self.mergedVideo = MergedVideo(url: nil, composition: composition, fileSize: fileSize, fileName: self.defaultFilename())
-                }
+                await self.setMergedVideo(
+                    mergedVideo: MergedVideo(
+                        url: nil, composition: composition, fileSize: fileSize, fileName: self.defaultFilename()
+                    )
+                )
+                    
+
             } catch {
                 self.handle(error)
             }
@@ -286,10 +318,9 @@ class VideoJoinModel: ObservableObject {
     }
     
     func saveLocally(timer: ProgressModel) async -> URL? {
-        DispatchQueue.main.async {
-            self.savingInProgress = true
-        }
         do {
+            await setSavingInProgress()
+            
             // Export to disk
             guard let composition = mergedVideo?.composition else {
                 throw err("Videos composition is empty")
@@ -311,9 +342,7 @@ class VideoJoinModel: ObservableObject {
             exportSession.outputFileType = .mov
             log("Output url: \(outputFileURL)")
             
-            DispatchQueue.main.async {
-                self.exportSession = exportSession
-            }
+            await setExportSession(exportSession: exportSession)
             
             // Track progress
             await timer.startTrackingProgress()
@@ -334,23 +363,16 @@ class VideoJoinModel: ObservableObject {
             // Get file size
             let attributes = try FileManager.default.attributesOfItem(atPath: outputFileURL.path)
             if let fileSize = attributes[.size] as? UInt64 {
-                DispatchQueue.main.async {
-                    self.mergedVideo?.fileSize = Int64(fileSize)
-                }
+                await setMergedVideoFileSize(fileSize: Int64(fileSize))
             } else {
                 log("Could not fetch file size")
             }
-            DispatchQueue.main.async {
-                self.savingInProgress = false
-                self.mergedVideo?.url = outputFileURL
-            }
+            
+            await finishSaving(url: outputFileURL)
             return outputFileURL
         } catch {
             handle(error)
-            DispatchQueue.main.async {
-                self.savingInProgress = false
-                self.mergedVideo?.url = nil
-            }
+            await finishSaving(url: nil)
             return nil
         }
     }
@@ -370,29 +392,31 @@ class VideoJoinModel: ObservableObject {
     }
     
     func handle(_ error: Error) {
-        DispatchQueue.main.async {
-            // First, try to cast the error to the specific type we're interested in.
-            if let dataError = error as? DataError {
-                // Handle the specific cases of DataError
-                switch dataError {
-                case .unknown(let msg):
-                    // Set the error message and log it.
-                    // Make sure `errMsg` is declared somewhere accessible in this scope.
-                    self.errMsg = msg
-                    log(msg) // Ensure there's a function or method `log` accepting a String.
-                    // Add other cases for DataError here if needed.
+        Task {
+            await MainActor.run {
+                // First, try to cast the error to the specific type we're interested in.
+                if let dataError = error as? DataError {
+                    // Handle the specific cases of DataError
+                    switch dataError {
+                    case .unknown(let msg):
+                        // Set the error message and log it.
+                        // Make sure `errMsg` is declared somewhere accessible in this scope.
+                        self.errMsg = msg
+                        log(msg) // Ensure there's a function or method `log` accepting a String.
+                        // Add other cases for DataError here if needed.
+                    }
+                } else {
+                    // If the error is not a DataError, handle the default case.
+                    self.errMsg = error.localizedDescription
+                    // Here `msg` should be replaced with `errMsg` or use `error.localizedDescription` directly.
+                    log(self.errMsg) // Similarly, ensure 'errMsg' is accessible and 'log' can be called like this.
                 }
-            } else {
-                // If the error is not a DataError, handle the default case.
-                self.errMsg = error.localizedDescription
-                // Here `msg` should be replaced with `errMsg` or use `error.localizedDescription` directly.
-                log(self.errMsg) // Similarly, ensure 'errMsg' is accessible and 'log' can be called like this.
-            }
-//            self.showMerge = false
-            if self.showMergeView {
-                self.isMergeError = true
-            } else {
-                self.isError = true
+                //            self.showMerge = false
+                if self.showMergeView {
+                    self.isMergeError = true
+                } else {
+                    self.isError = true
+                }
             }
         }
     }

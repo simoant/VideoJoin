@@ -86,15 +86,6 @@ struct MergedView: View {
     
     var progressView: some View {
         VStack {
-            Button("Start") {
-                timer.startTrackingProgress()
-            }
-            ProgressView(value: model.progress) {
-                Text("Processing... \((Int(model.progress * 100)).formatted(.number))%" )
-            }
-            .progressViewStyle(.linear)
-            .padding()
-            
             ProgressView(value: timer.progress) {
                 Text("Processing... \((Int((timer.progress) * 100)).formatted(.number))%" )
             }
