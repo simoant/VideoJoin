@@ -30,6 +30,7 @@
 		3A9D2EC42BB47C4900461FF6 /* products.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3A9D2EC32BB47C4900461FF6 /* products.plist */; };
 		3A9D2EC62BB47D0600461FF6 /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9D2EC52BB47D0600461FF6 /* StoreKitManager.swift */; };
 		3A9D2EC92BB73A1400461FF6 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 3A9D2EC82BB73A1400461FF6 /* PrivacyInfo.xcprivacy */; };
+		3A9D2ECC2BB73F4A00461FF6 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A9D2ECB2BB73F4900461FF6 /* StoreKit.framework */; };
 		3A9F0DFF2BB0AC4500EBAC8D /* BottomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9F0DFE2BB0AC4500EBAC8D /* BottomView.swift */; };
 		3A9F0E012BB0CD6000EBAC8D /* MergedVideoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9F0E002BB0CD6000EBAC8D /* MergedVideoView.swift */; };
 		3AAEFD392BB18707000A89B4 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AAEFD382BB18707000A89B4 /* ActivityView.swift */; };
@@ -83,6 +84,7 @@
 		3A9D2EC32BB47C4900461FF6 /* products.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = products.plist; sourceTree = "<group>"; };
 		3A9D2EC52BB47D0600461FF6 /* StoreKitManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StoreKitManager.swift; sourceTree = "<group>"; };
 		3A9D2EC82BB73A1400461FF6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		3A9D2ECB2BB73F4900461FF6 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		3A9F0DFE2BB0AC4500EBAC8D /* BottomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomView.swift; sourceTree = "<group>"; };
 		3A9F0E002BB0CD6000EBAC8D /* MergedVideoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MergedVideoView.swift; sourceTree = "<group>"; };
 		3AAEFD382BB18707000A89B4 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
@@ -96,6 +98,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3A9D2ECC2BB73F4A00461FF6 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -124,6 +127,7 @@
 				3A275EBD2BAF762300F6D50D /* VideoJoinTests */,
 				3A275EC72BAF762300F6D50D /* VideoJoinUITests */,
 				3A275EA92BAF762100F6D50D /* Products */,
+				3A9D2ECA2BB73F4900461FF6 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -201,6 +205,14 @@
 				3AAEFD3C2BB1A756000A89B4 /* PreviewVideoPlayer.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		3A9D2ECA2BB73F4900461FF6 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				3A9D2ECB2BB73F4900461FF6 /* StoreKit.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
