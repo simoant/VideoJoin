@@ -10,11 +10,13 @@ import Photos
 import PhotosUI
 import SwiftUI
 import UIKit
+import RevenueCat
 
 struct VideoItem: Identifiable {
     let id: String
     
     var downloadProgress: Double = 0.0
+    var isValid = true
     var video: Video? = nil
 }
 
@@ -33,6 +35,7 @@ struct Video {
 struct MergedVideo {
     var url: URL?
     var composition: AVMutableComposition?
+    var videoComposition: AVMutableVideoComposition?
     var fileSize: Int64?
     var fileName: String?
 }
@@ -51,14 +54,53 @@ class VideoJoinModel: ObservableObject {
     @Published var showPurchaseView = false
     @Published var alertSaved = false
     
-    @Published var selected = [PhotosPickerItem]()
+    @Published var selected = [PhotosPickerItem]() {
+        didSet {
+            log("didSet selected: \(selected)")
+            
+        }
+    }
     @Published var hiRes = true
     @Published var videos = [VideoItem]()
     @Published var mergedVideo: MergedVideo? = nil
-    @Published var isPurchased = false
     
-    let maxFreeVideos = 10
+    private var revCat = RevenueCatManager()
+    @Published var showPaywall = false
+    @Published var fullVersion = true
     
+    let maxFreeVideos = 2
+    
+    @MainActor
+    func displayPaywall() {
+        clearSelectedNew()
+        showPaywall = true
+    }
+    
+    func canAddVideos() async throws -> Bool {
+        do { 
+            let purchased = try await hasActiveSubscription()
+            if selected.count + videos.count > maxFreeVideos && !purchased {
+                return false
+            }
+            return true
+        } catch {
+            handle(error)
+            return false
+        }
+    }
+    
+    func hasActiveSubscription() async throws -> Bool {
+        return try await revCat.hasActiveSubscription()
+    }
+    
+    @MainActor
+    func updateVersionStatus() async {
+        do {
+            self.fullVersion = try await self.hasActiveSubscription()
+        } catch {
+            handle(error)
+        }
+    }
     
     func addVideos() {
         if !selected.isEmpty {
@@ -66,54 +108,61 @@ class VideoJoinModel: ObservableObject {
                 do {
                     log("Selected videos: \(selected.count)")
                     
-                    log("Purchased: \(isPurchased)")
-                    if selected.count + videos.count > maxFreeVideos && !isPurchased {
-                        await MainActor.run {
-                            self.showPurchaseView = true
-                        }
+                    let identifiers = self.selected.compactMap(\.itemIdentifier)
+                    
+                    if (try await canAddVideos() == false) {
+                        await displayPaywall()
+                        log("Selected videos after paywall: \(selected.count)")
                         return
                     }
-
-                    let identifiers = selected.compactMap(\.itemIdentifier)
                         
-                    await MainActor.run {
-                        for i in 0..<identifiers.count {
-                            self.videos.append(VideoItem(id: identifiers[i]))
-                        }
-                        self.selected.removeAll()
-                    }
+                    await self.clearSelected()
                 
                     let fetchOptions = PHFetchOptions()
                     fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
                     let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: fetchOptions)
                     log("Fetch result: \(fetchResult)")
+                    
                     if identifiers.count != fetchResult.count {
-                        await self.clear()
                         throw err(
                             "Failed to get \(identifiers.count - fetchResult.count) videos from Photo library. Please check that you have granted access to them.")
                     }
 
                     // Use a TaskGroup to concurrently fetch and process each video
                     await withTaskGroup(of: (Video?, Int).self) { group in
-                        log("inside grouo task \(self.videos.count)")
-                        for i in 0..<self.videos.count {
+                        log("inside group task \(self.videos.count)")
+
+                        for i in 0..<fetchResult.count {
+                            let phAsset = fetchResult.object(at: i)
+                            let idx = await self.addVideoItem(videoItem: VideoItem(id: phAsset.localIdentifier))
+                        
                             group.addTask {
                                 do {
                                     let phAsset = fetchResult.object(at: i)
                                     let video = try await self.getVideo(phAsset: phAsset, progressHandler: { progress in
-                                        Task { await self.setDownloadProgress(progress: progress, i: i) }
+                                        Task { await self.setDownloadProgress(progress: progress, i: idx) }
                                     })
-                                    return (video, i)
+                                    return (video, idx)
                                 }
                                 catch {
                                     self.handle(error)
-                                    return (nil, i)
+                                    return (nil, idx)
                                 }
                             }
                         }
                         for await (video, i) in group {
-                            guard let video = video else { log("Videos is empty"); continue }
-                            await self.setVideo(video: video, i: i)
+                            if  let video = video {
+                                await self.setVideo(video: video, i: i)
+                            } else {
+                                log("Videos is empty")
+                                await self.setInvalidVideo(i: i)
+                            }
+//                            guard let video = video else {
+//                                log("Videos is empty")
+//                                videos.remove(at: i)
+//                                continue
+//                            }
+                            
                         }
                     }
                 } catch {
@@ -130,8 +179,7 @@ class VideoJoinModel: ObservableObject {
         let asset = await self.getAvAsset(phAsset, progressHandler: progressHandler)
         log("AvAsset: \(asset)")
         guard let urlAsset = asset as? AVURLAsset else {
-            log("Could not access some of selected videos. Please make sure you have granted access to Photo library.")
-            return nil
+            throw err("Could not access some of selected videos. Some media types like slow motion videos are not supported yet.")
         }
         let image = try self.getThumbnail(asset: urlAsset)
         let resolution = urlAsset.tracks(withMediaType: .video).first?.naturalSize ?? .zero
@@ -185,9 +233,20 @@ class VideoJoinModel: ObservableObject {
     func merge() {
         self.progress = 0.0
         self.showMergeView = true
+        
+        func isVideoUpsideDown(_ transform: CGAffineTransform) -> Bool {
+            return transform.a == -1.0 && transform.d == -1.0
+        }
+
+        // Correct the upside-down video by applying a 180-degree rotation
+        func correctedTransform(for transform: CGAffineTransform) -> CGAffineTransform {
+            // This rotates around the center of the video. Adjust if needed to match the video's resolution.
+            transform.rotated(by: .pi)
+        }
 
         task = Task {
             let composition = AVMutableComposition()
+            
             do {
                 //        throw err("Test")
                 guard let trackVideo = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
@@ -200,33 +259,193 @@ class VideoJoinModel: ObservableObject {
                 var insertTime = CMTime.zero
                 var fileSize: Int64 = 0
                 
+                var maxWidth: CGFloat = 0
+                var maxHeight: CGFloat = 0
+                var highestFrameRate: Float64 = 0
+                var sourceTrackId: CMPersistentTrackID? = nil
+                
                 //  Create composition
-                for video in self.videos.compactMap(\.video) {
+                let videos = self.videos.compactMap(\.video)
+                struct VideoTrack {
+                    var video: Video
+                    var track: AVAssetTrack
+                    var start: CMTime
+                    var duration: CMTime
+                }
+                var tracks: [VideoTrack] = [VideoTrack]()
+                for video in videos {
                     let asset = AVAsset(url: video.url)
                     
                     let start = CMTime(seconds: video.trimStart, preferredTimescale: 600)
                     let duration = CMTime(seconds: video.trimEnd - video.trimStart, preferredTimescale: 600)
                     
-                    // Handle video track
-                    if let assetTrackVideo = try await asset.loadTracks(withMediaType: .video).first {
-                        try trackVideo.insertTimeRange(CMTimeRangeMake(start: start, duration: duration), of: assetTrackVideo, at: insertTime)
-                        
-                    } else { throw err("Failed loading video tracks") }
+                    guard let assetTrackVideo = try await asset.loadTracks(withMediaType: .video).first else {
+                        throw err("Error loading video track for \(video.url)")
+                    }
                     
-                    // Handle audio track
-                    if let assetTrackAudio = try await asset.loadTracks(withMediaType: .audio).first {
-                        try trackAudio.insertTimeRange(CMTimeRangeMake(start: start, duration: duration), of: assetTrackAudio, at: insertTime)
-                    } else { throw err("Failed loading video tracks") }
+                    try trackVideo.insertTimeRange(CMTimeRangeMake(start: start, duration: duration), of: assetTrackVideo, at: insertTime)
+                    
+                    // Load the track's properties
+                    let naturalSize = assetTrackVideo.naturalSize
+                    
+                    let preferredTransform = assetTrackVideo.preferredTransform
+                    log("Preffered transformation: \(preferredTransform)")
+
+                    maxWidth = max(maxWidth, naturalSize.width)
+                    maxHeight = max(maxHeight, naturalSize.height)
+                    
+                    let nominalFrameRate = assetTrackVideo.nominalFrameRate
+                    highestFrameRate = max(highestFrameRate, Double(nominalFrameRate))
+                    
+                    guard let assetTrackAudio = try await asset.loadTracks(withMediaType: .audio).first else {
+                        throw err("Error loading video track for \(video.url)")
+                    }
+                    try trackAudio.insertTimeRange(CMTimeRangeMake(start: start, duration: duration), of: assetTrackAudio, at: insertTime)
+                    tracks.append(VideoTrack(video: video, track: assetTrackVideo, start: insertTime, duration: duration))
                     
                     insertTime = CMTimeAdd(insertTime, duration)
                     fileSize += video.size
                 }
                 
+                log("Composition natural size: \(composition.naturalSize)")
+                log("Max size: \(maxWidth) \(maxHeight)")
+                
+                // create video editing composition
+                let videoComposition = try await AVMutableVideoComposition.videoComposition(withPropertiesOf: composition)
+                var instructions = [AVMutableVideoCompositionInstruction]()
+                for videoTrack in tracks {
+                    let preferredTransform = videoTrack.track.preferredTransform
+                    let naturalSize = videoTrack.track.naturalSize
+                    
+                    let instruction = AVMutableVideoCompositionInstruction()
+                    instruction.timeRange = CMTimeRange(start: videoTrack.start, duration: videoTrack.duration)
+                    
+                    let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: trackVideo)
+
+                    if preferredTransform.b == 1.0 || preferredTransform.c == -1.0 { // Video is rotated 90° or 270°
+                        let verticalVideoSize = naturalSize
+                        let verticalHeight = verticalVideoSize.width
+                        let verticalWidth = verticalVideoSize.height
+                        print(verticalHeight, verticalWidth)
+
+                        let scaleFactorResolution = maxWidth / naturalSize.width
+                        let scaleFactor = (verticalWidth * scaleFactorResolution) / (maxWidth / scaleFactorResolution)
+                        
+                        let translateX = (maxWidth + (verticalWidth * scaleFactor)) / 2
+                        var finalTransform = preferredTransform
+                        finalTransform.ty = 0
+                        finalTransform.tx = translateX
+                        finalTransform = finalTransform.scaledBy(x: scaleFactor, y: scaleFactor) //.translatedBy(x: translateX, y: 0)
+                        print(finalTransform)
+                        print(preferredTransform)
+
+                        // Apply the transform to the layer instruction
+                        layerInstruction.setTransform(finalTransform, at: videoTrack.start)
+                    } else {
+                        var scaleFactor = (maxWidth / naturalSize.width)
+                        
+                        var finalTransform = preferredTransform.scaledBy(x: scaleFactor, y: scaleFactor)
+                        print(finalTransform)
+                        print(preferredTransform)
+
+                        layerInstruction.setTransform(finalTransform, at: videoTrack.start)
+                    }
+
+                    instruction.layerInstructions = [layerInstruction]
+                    instructions.append(instruction)
+
+                }
+                
+                print("Natural size", composition.naturalSize)
+                
+                videoComposition.instructions = instructions
+//                videoComposition.renderSize = composition.naturalSize
+                videoComposition.renderSize = CGSize(width: maxWidth, height: maxHeight)
+                videoComposition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(highestFrameRate))
+
+//                log("Video composition instructions: \(videoComposition.instructions)")
+                log("Video composition renderSize: \(videoComposition.renderSize)")
+                log("Video composition frameDuration: \(videoComposition.frameDuration)")
+
                 await self.setMergedVideo(
                     mergedVideo: MergedVideo(
-                        url: nil, composition: composition, fileSize: fileSize, fileName: self.defaultFilename()
+                        url: nil, composition: composition, videoComposition: videoComposition, fileSize: fileSize, fileName: self.defaultFilename()
                     )
                 )
+                    
+                    // Handle video track
+//                    if let assetTrackVideo = try await asset.loadTracks(withMediaType: .video).first {
+//                        sourceTrackId = assetTrackVideo.trackID
+//                        try trackVideo.insertTimeRange(CMTimeRangeMake(start: start, duration: duration), of: assetTrackVideo, at: insertTime)
+//                        log("Preffered transformation: \(assetTrackVideo.preferredTransform)")
+//                        let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: trackVideo)
+//                        let preferredTransform = assetTrackVideo.preferredTransform
+////                        if isVideoUpsideDown(preferredTransform) {
+////                            // If upside-down, apply a correction
+////                            let transform: CGAffineTransform = CGAffineTransform(rotationAngle: .pi)
+////                            layerInstruction.setTransform(transform, at: start)
+////                        } else {
+//                            // If not upside-down, use the original preferred transform
+////                            trackVideo.preferredTransform = assetTrackVideo.preferredTransform
+//                            layerInstruction.setTransform(preferredTransform, at: start)
+////                        }
+//                        
+//                        // Load the track's properties
+//                        let naturalSize = assetTrackVideo.naturalSize
+//                        
+//                        
+//                        // Calculate the video's actual orientation and size after applying the preferredTransform.
+//                        let videoSize: CGSize
+//                        if preferredTransform.b == 1.0 || preferredTransform.c == -1.0 { // Video is rotated 90° or 270°
+//                            // Swap width and height
+//                            let k = naturalSize.height / naturalSize.width
+//                            videoSize = CGSize(width: naturalSize.height * k, height: naturalSize.width * k)
+//                        } else {
+//                            videoSize = naturalSize
+//                        }
+//                        
+////                        layerInstruction.setCropRectangle(CGRect(x: 0, y: 0, width: videoSize.width, height: videoSize.height), at: insertTime)
+//                        
+//                        maxWidth = max(maxWidth, videoSize.width)
+//                        maxHeight = max(maxHeight, videoSize.height)
+//                        
+//                        
+//                        let nominalFrameRate = assetTrackVideo.nominalFrameRate
+//                        highestFrameRate = max(highestFrameRate, Double(nominalFrameRate))
+//                        
+//                        let instruction = AVMutableVideoCompositionInstruction()
+////                        layerInstruction.setCropRectangle(, at: insertTime)
+//                        instruction.timeRange = CMTimeRange(start: insertTime, duration: duration)
+//                        instruction.layerInstructions = [layerInstruction]
+//                        
+//                        instructions.append(instruction)
+//
+//                        
+//                        
+//                    } else { throw err("Failed loading video tracks") }
+//                    
+//                    // Handle audio track
+//                    if let assetTrackAudio = try await asset.loadTracks(withMediaType: .audio).first {
+//                        try trackAudio.insertTimeRange(CMTimeRangeMake(start: start, duration: duration), of: assetTrackAudio, at: insertTime)
+//                    } else { throw err("Failed loading video tracks") }
+//                    
+//                    insertTime = CMTimeAdd(insertTime, duration)
+//                    fileSize += video.size
+//                }
+//
+//                let videoComposition = try await AVMutableVideoComposition.videoComposition(withPropertiesOf: composition)
+////                videoComposition.customVideoCompositorClass = CustomCompositor.self
+//                videoComposition.instructions = instructions
+////                videoComposition.renderSize = composition.naturalSize
+//                videoComposition.renderSize = CGSize(width: maxWidth, height: maxHeight)
+//                videoComposition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(highestFrameRate))
+////                videoComposition.frameDuration = CMTime(seconds: 1, preferredTimescale: 600)
+////                videoComposition.renderScale = 0.5
+////                videoComposition.sourceTrackIDForFrameTiming = sourceTrackId!
+//                
+////                videoComposition.renderSize = CGSize(width: 1280, height: 720)  Set to a default resolution for testing
+////                videoComposition.frameDuration = CMTime(value: 1, timescale: 30) // Example: 30 fps
+//
                     
 
             } catch {
@@ -274,6 +493,10 @@ class VideoJoinModel: ObservableObject {
             guard let composition = mergedVideo?.composition else {
                 throw err("Videos composition is empty")
             }
+
+            guard let videoComposition = mergedVideo?.videoComposition else {
+                throw err("Videos videoComposition is empty")
+            }
             
             guard let exportSession = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough) else {
                 throw err("Could not create export session")
@@ -288,6 +511,7 @@ class VideoJoinModel: ObservableObject {
             let outputFileURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName + ".mov")
             
             exportSession.outputURL = outputFileURL
+            exportSession.videoComposition = videoComposition
             exportSession.outputFileType = .mov
             log("Output url: \(outputFileURL)")
             
@@ -337,7 +561,7 @@ class VideoJoinModel: ObservableObject {
     }
     
     func allLoaded() -> Bool {
-        videos.filter({$0.video == nil}).count == 0
+        videos.filter({$0.video == nil && $0.isValid}).count == 0
     }
     
     func handle(_ error: Error) {
@@ -421,10 +645,38 @@ class VideoJoinModel: ObservableObject {
     func clear() {
         self.videos.removeAll()
     }
+
+    @MainActor
+    func clearSelected() {
+        self.selected.removeAll()
+    }
+
+    @MainActor
+    func clearSelectedNew() {
+        let ids: [String] = videos.compactMap { $0.id }
+        
+        selected = selected.filter { item in
+            if let id = item.itemIdentifier {
+                return ids.contains(id)
+            }
+            return false
+        }
+    }
     
     @MainActor
     func setVideo(video: Video, i: Int) {
         self.videos[i].video = video
+    }
+
+    @MainActor
+    func setInvalidVideo(i: Int) {
+        self.videos[i].isValid = false
+    }
+    
+    @MainActor
+    func addVideoItem(videoItem: VideoItem) -> Int {
+        self.videos.append(videoItem)
+        return videos.count - 1
     }
 
     @MainActor

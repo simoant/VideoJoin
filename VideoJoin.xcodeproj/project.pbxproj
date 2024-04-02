@@ -31,6 +31,10 @@
 		3A9D2EC62BB47D0600461FF6 /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9D2EC52BB47D0600461FF6 /* StoreKitManager.swift */; };
 		3A9D2EC92BB73A1400461FF6 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 3A9D2EC82BB73A1400461FF6 /* PrivacyInfo.xcprivacy */; };
 		3A9D2ECC2BB73F4A00461FF6 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A9D2ECB2BB73F4900461FF6 /* StoreKit.framework */; };
+		3A9D2ECF2BB752D900461FF6 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 3A9D2ECE2BB752D900461FF6 /* RevenueCat */; };
+		3A9D2ED12BB752D900461FF6 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 3A9D2ED02BB752D900461FF6 /* RevenueCatUI */; };
+		3A9D2ED32BB7564100461FF6 /* RevenueCatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9D2ED22BB7564100461FF6 /* RevenueCatManager.swift */; };
+		3A9D2ED52BB9722100461FF6 /* StoreKitTestCertificate.cer in Resources */ = {isa = PBXBuildFile; fileRef = 3A9D2ED42BB9722100461FF6 /* StoreKitTestCertificate.cer */; };
 		3A9F0DFF2BB0AC4500EBAC8D /* BottomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9F0DFE2BB0AC4500EBAC8D /* BottomView.swift */; };
 		3A9F0E012BB0CD6000EBAC8D /* MergedVideoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A9F0E002BB0CD6000EBAC8D /* MergedVideoView.swift */; };
 		3AAEFD392BB18707000A89B4 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AAEFD382BB18707000A89B4 /* ActivityView.swift */; };
@@ -85,6 +89,8 @@
 		3A9D2EC52BB47D0600461FF6 /* StoreKitManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StoreKitManager.swift; sourceTree = "<group>"; };
 		3A9D2EC82BB73A1400461FF6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		3A9D2ECB2BB73F4900461FF6 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		3A9D2ED22BB7564100461FF6 /* RevenueCatManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevenueCatManager.swift; sourceTree = "<group>"; };
+		3A9D2ED42BB9722100461FF6 /* StoreKitTestCertificate.cer */ = {isa = PBXFileReference; lastKnownFileType = file; name = StoreKitTestCertificate.cer; path = ../Apple/StoreKitTestCertificate.cer; sourceTree = "<group>"; };
 		3A9F0DFE2BB0AC4500EBAC8D /* BottomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomView.swift; sourceTree = "<group>"; };
 		3A9F0E002BB0CD6000EBAC8D /* MergedVideoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MergedVideoView.swift; sourceTree = "<group>"; };
 		3AAEFD382BB18707000A89B4 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
@@ -98,7 +104,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3A9D2ECF2BB752D900461FF6 /* RevenueCat in Frameworks */,
 				3A9D2ECC2BB73F4A00461FF6 /* StoreKit.framework in Frameworks */,
+				3A9D2ED12BB752D900461FF6 /* RevenueCatUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -123,6 +131,8 @@
 			isa = PBXGroup;
 			children = (
 				3A9D2EC82BB73A1400461FF6 /* PrivacyInfo.xcprivacy */,
+				3A9D2EC12BB47C3F00461FF6 /* products.storekit */,
+				3A9D2ED42BB9722100461FF6 /* StoreKitTestCertificate.cer */,
 				3A275EAA2BAF762100F6D50D /* VideoJoin */,
 				3A275EBD2BAF762300F6D50D /* VideoJoinTests */,
 				3A275EC72BAF762300F6D50D /* VideoJoinUITests */,
@@ -158,8 +168,8 @@
 				3AAEFD3E2BB1B052000A89B4 /* PlayerObserver.swift */,
 				3A9D2EBC2BB1B8A300461FF6 /* Launch Screen.storyboard */,
 				3A9D2EBF2BB31B3000461FF6 /* ProgressModel.swift */,
-				3A9D2EC12BB47C3F00461FF6 /* products.storekit */,
 				3A9D2EC32BB47C4900461FF6 /* products.plist */,
+				3A9D2ED22BB7564100461FF6 /* RevenueCatManager.swift */,
 			);
 			path = VideoJoin;
 			sourceTree = "<group>";
@@ -231,6 +241,10 @@
 			dependencies = (
 			);
 			name = VideoJoin;
+			packageProductDependencies = (
+				3A9D2ECE2BB752D900461FF6 /* RevenueCat */,
+				3A9D2ED02BB752D900461FF6 /* RevenueCatUI */,
+			);
 			productName = VideoJoin;
 			productReference = 3A275EA82BAF762100F6D50D /* VideoJoin.app */;
 			productType = "com.apple.product-type.application";
@@ -303,6 +317,9 @@
 				Base,
 			);
 			mainGroup = 3A275E9F2BAF762100F6D50D;
+			packageReferences = (
+				3A9D2ECD2BB752D900461FF6 /* XCRemoteSwiftPackageReference "purchases-ios" */,
+			);
 			productRefGroup = 3A275EA92BAF762100F6D50D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -320,6 +337,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3A9D2EC92BB73A1400461FF6 /* PrivacyInfo.xcprivacy in Resources */,
+				3A9D2ED52BB9722100461FF6 /* StoreKitTestCertificate.cer in Resources */,
 				3A9D2EC22BB47C3F00461FF6 /* products.storekit in Resources */,
 				3A9D2EC42BB47C4900461FF6 /* products.plist in Resources */,
 				3A9D2EBD2BB1B8A300461FF6 /* Launch Screen.storyboard in Resources */,
@@ -369,6 +387,7 @@
 				3A275ED92BAF769200F6D50D /* VideoJoinModel.swift in Sources */,
 				3AAEFD3D2BB1A756000A89B4 /* PreviewVideoPlayer.swift in Sources */,
 				3A275EE92BB0650000F6D50D /* Utils.swift in Sources */,
+				3A9D2ED32BB7564100461FF6 /* RevenueCatManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -708,6 +727,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		3A9D2ECD2BB752D900461FF6 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.39.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3A9D2ECE2BB752D900461FF6 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3A9D2ECD2BB752D900461FF6 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
+		};
+		3A9D2ED02BB752D900461FF6 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3A9D2ECD2BB752D900461FF6 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCatUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 3A275EA02BAF762100F6D50D /* Project object */;
 }

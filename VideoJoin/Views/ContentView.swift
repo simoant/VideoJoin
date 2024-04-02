@@ -9,16 +9,18 @@ import SwiftUI
 import PhotosUI
 import SwiftData
 import StoreKit
+import RevenueCatUI
+import RevenueCat
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var items: [Item]
     
     @StateObject var model = VideoJoinModel()
-    @StateObject var skit = StoreKitManager()
+//    @StateObject var skit = StoreKitManager()
     
     @State private var showingPicker = false
-
+    
     var body: some View {
         NavigationStack {
             VStack {
@@ -34,11 +36,13 @@ struct ContentView: View {
 //                else {
                 List {
                     ForEach(0..<model.videos.count, id: \.self) { index in
-                        if model.videos[index].video == nil {
-                            LoadingVideoView(model: model, index: index)
-                        } else {
-                            NavigationLink(value: index) {
-                                VideoView(model: model, index: index)
+                        if model.videos[index].isValid {
+                            if model.videos[index].video == nil {
+                                LoadingVideoView(model: model, index: index)
+                            } else {
+                                NavigationLink(value: index) {
+                                    VideoView(model: model, index: index)
+                                }
                             }
                         }
                     }
@@ -58,6 +62,7 @@ struct ContentView: View {
             .onAppear(perform: {
                 clearTemporaryFiles()
                 Task {
+                    Task { await model.updateVersionStatus() }
                     let status = await model.requestAuthorization()
                     if (!status) {
                         model.errMsg = "You need to grant access to the photo library, otherwise the app will not work. Please open Settings->VideoJoin->Photos and set the access level."
@@ -65,11 +70,37 @@ struct ContentView: View {
                     }
                 }
             })
+            .sheet(isPresented: $model.showPaywall) {
+//                PaywallView(configuration: paywallConfig)
+                PaywallView(displayCloseButton: true)
+                    .onPurchaseCompleted { customerInfo in
+                        log("Purchase completed: \(customerInfo.entitlements)")
+                        Task { await model.updateVersionStatus() }
+                        addVideos()
+                    }
+                    .onPurchaseFailure { error in
+                        log("Purchase failed: \(error.localizedDescription)")
+                        model.errMsg = "Something went wrong with your purchase"
+                        model.isError = true
+                    }
+                    .onPurchaseCancelled {
+                        log("Purchase cancelled")
+                        model.errMsg = "Your purchase was canceled. You are still using limited version"
+                        model.isError = true
+                    }
+//                    .onRequestedDismissal {
+//                        log("Purchase dialog dismissal")
+//                        model.clear()
+//                    }
+            }
             //  Photo Picker
             .photosPicker(isPresented: $showingPicker, selection: $model.selected,
                           selectionBehavior: PhotosPickerSelectionBehavior.ordered,
                           matching: .videos, photoLibrary: .shared())
-            .onChange(of: model.selected) { addVideos() }
+            .onChange(of: model.selected) {
+                log("onChange selected: \(model.selected)")
+                addVideos()
+            }
             //  Error
             .alert("Error", isPresented: $model.isError) {
                 Button("OK", role: .cancel) { model.isError = false }
@@ -81,15 +112,6 @@ struct ContentView: View {
                 MergedView(model: model)
             })
 
-            //  StoreKit
-            .alert("Limited version", isPresented: $model.showPurchaseView ) {
-                Button("OK", role: .none) { purchase() }
-                Button("Restore purchase", role: .none) { restorePurchase() }
-                Button("Cancel", role: .cancel) { cancelPurchase() }
-            } message: {
-                Text("Current free version serves for evaluation purposes only and allows to merge only \(model.maxFreeVideos) videos at a time. Do you want to buy Full version?")
-            }
-            .onChange(of: skit.purchased) { purchaseChanged() }
             //  Toolbar
             .toolbar {
                 ToolbarItemGroup(placement: .automatic) {
@@ -118,53 +140,7 @@ struct ContentView: View {
             }
         }
     }
-    
-    private func purchase() {
-        Task {
-            guard let product = skit.storeProducts.first else {
-                log("Product not found");
-                await MainActor.run {
-                    self.model.selected.removeAll()
-                    self.model.errMsg = "Product not found. Pls contact the developer"
-                    self.model.isError = true
-                }
-                return
-            }
 
-            try await skit.purchase(product)
-
-            if skit.purchased.count > 0 {
-                addVideos()
-            } else {
-                await MainActor.run {
-                    self.model.selected.removeAll()
-                    self.model.errMsg = "Sorry, something when wrong, transaction failed."
-                    self.model.isError = true
-                }
-            }
-        }
-        model.showPurchaseView = false
-    }
-    
-    private func purchaseChanged() {
-        log("Purchase changed")
-        guard let product = skit.storeProducts.first else { log("Product not found"); return }
-        self.model.isPurchased = self.skit.isPurchased(product)
-    }
-
-    private func restorePurchase() {
-        Task {
-            try? await AppStore.sync()
-            addVideos()
-        }
-        model.showPurchaseView = false
-    }
-    
-    private func cancelPurchase() {
-        model.selected.removeAll()
-        model.showPurchaseView = false
-    }
-    
     private func mergeVideos() {
 //        model.longOp()
         model.merge()

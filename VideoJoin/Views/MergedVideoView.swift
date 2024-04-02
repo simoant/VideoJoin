@@ -12,63 +12,78 @@ import AVKit
 struct MergedVideoView: View {
     @StateObject var model: VideoJoinModel
     @StateObject var timer: ProgressModel
+    @State var size: CGSize
+    @State var safeArea: EdgeInsets
     @FocusState private var filenameFocused: Bool
     @State var fileName = ""
 
     var body: some View {
-        VStack {
-            PreviewVideoPlayer(model: model)
-            Text("File size: \(displayFileSize(size: model.mergedVideo?.fileSize ?? 0))")
-            
-            TextField("Enter file name", text: $fileName)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .focused($filenameFocused)
-                .padding()
-                .onAppear {
-                    fileName = model.defaultFilename() // Set default filename on appear
-                }
-                .onChange(of: fileName) { newValue in
-                    model.mergedVideo?.fileName = fileName
-                    //                            model.fileName = validateFilename(newValue) ? newValue : viewModel.fileName
-                }
-            HStack(spacing: 20) {
-                Button(action: { self.exportToPhotoLibrary() })  {
-                    Text("Save")
-                        .bold()
-                        .frame(minWidth: 0, maxWidth: .infinity)
-                        .padding()
-                        .foregroundColor(.white)
-                        .background(disabled() ?
-                                    RoundedRectangle(cornerRadius: 10).fill(Color.gray) :
-                                        RoundedRectangle(cornerRadius: 10).fill(Color.blue))
-                        .shadow(radius: 3)
-                        .opacity(disabled() ? 0.5 : 1)
-                }.disabled(disabled())
+        GeometryReader { dim in
+            VStack {
+                let videoSize = model.mergedVideo?.composition?.naturalSize ?? CGSize(width: 0, height: 0)
+                let scale = dim.size.width / videoSize.width
+                let height = (videoSize.height * scale)
                 
-                Button(action: { self.share() })  {
-                    Text("Share")
-                        .bold()
-                        .frame(minWidth: 0, maxWidth: .infinity)
-                        .padding()
-                        .foregroundColor(.white)
-                        .background(disabled() ?
-                                    RoundedRectangle(cornerRadius: 10).fill(Color.gray) :
-                                        RoundedRectangle(cornerRadius: 10).fill(Color.blue))
-                        .shadow(radius: 3)
-                        .opacity(disabled() ? 0.5 : 1)
-                }.disabled(disabled())
-            }
-            .padding(.top)
-            .onAppear {
-                do {
-                    try AVAudioSession.sharedInstance().setCategory(.playback)
-                    try AVAudioSession.sharedInstance().setActive(true)
-                } catch {
-                    log("Failed to set audio session category. Error: \(error)")
+                Spacer()
+                
+                PreviewVideoPlayer(model: model)
+                    .frame(height: height)
+                
+                Spacer()
+                
+                Text("File size: \(displayFileSize(size: model.mergedVideo?.fileSize ?? 0))")
+                
+                TextField("Enter file name", text: $fileName)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .focused($filenameFocused)
+                    .padding()
+                    .onAppear {
+                        fileName = model.defaultFilename() // Set default filename on appear
+                    }
+                    .onChange(of: fileName) { newValue in
+                        model.mergedVideo?.fileName = fileName
+                        //                            model.fileName = validateFilename(newValue) ? newValue : viewModel.fileName
+                    }
+                HStack(spacing: 20) {
+                    Button(action: { self.exportToPhotoLibrary() })  {
+                        Text("Save")
+                            .bold()
+                            .frame(minWidth: 0, maxWidth: .infinity)
+                            .padding()
+                            .foregroundColor(.white)
+                            .background(disabled() ?
+                                        RoundedRectangle(cornerRadius: 10).fill(Color.gray) :
+                                            RoundedRectangle(cornerRadius: 10).fill(Color.blue))
+                            .shadow(radius: 3)
+                            .opacity(disabled() ? 0.5 : 1)
+                    }.disabled(disabled())
+                    
+                    Button(action: { self.share() })  {
+                        Text("Share")
+                            .bold()
+                            .frame(minWidth: 0, maxWidth: .infinity)
+                            .padding()
+                            .foregroundColor(.white)
+                            .background(disabled() ?
+                                        RoundedRectangle(cornerRadius: 10).fill(Color.gray) :
+                                            RoundedRectangle(cornerRadius: 10).fill(Color.blue))
+                            .shadow(radius: 3)
+                            .opacity(disabled() ? 0.5 : 1)
+                    }.disabled(disabled())
+                }
+                .padding(.top)
+                .onAppear {
+                    do {
+                        try AVAudioSession.sharedInstance().setCategory(.playback)
+                        try AVAudioSession.sharedInstance().setActive(true)
+                    } catch {
+                        log("Failed to set audio session category. Error: \(error)")
+                    }
                 }
             }
         }
     }
+    
     
     private func disabled() -> Bool {
         return !model.validateFilename()

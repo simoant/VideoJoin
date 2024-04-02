@@ -1,0 +1,147 @@
+{
+  "identifier" : "4E667734",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "2.99",
+      "familyShareable" : false,
+      "internalID" : "6479795324",
+      "localizations" : [
+        {
+          "description" : "Unlimited videos to merge",
+          "displayName" : "All app functionality",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.simoant.VideoJoin.lifetime",
+      "referenceName" : "lifetime",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6478782801",
+    "_developerTeamID" : "VTJ5AG6JVP",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 733436942.26106,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21470319",
+      "localizations" : [
+
+      ],
+      "name" : "full",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "0.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6480319044",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited functionality - Monthly billing",
+              "displayName" : "Montly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.simoant.VideoJoin.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "monthly",
+          "subscriptionGroupID" : "21470319",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "9.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6480319925",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited functionality - Yearly billing",
+              "displayName" : "Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.simoant.VideoJoin.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "yearly",
+          "subscriptionGroupID" : "21470319",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "subscriptionOffersKeyPair" : {
+    "id" : "CA341054",
+    "privateKey" : "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgy8kPzNCsYC0bVu8FzF8JNF7hu+/DH0gV8Ck3N7h+4z6gCgYIKoZIzj0DAQehRANCAASirj5WJrofURLBZFt0HkBDDi6lgAwNL611G3l0L1l7KEpnzymX0tC4+jjejE5PBSvCHAkVckRumye9GOvaJeC1"
+  },
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

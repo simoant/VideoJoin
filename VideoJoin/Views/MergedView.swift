@@ -25,30 +25,23 @@ struct MergedView: View {
     }
     
     var body: some View {
-        VStack {
-            if orientation.isLandscape {
-                if model.savingInProgress {
-                    progressView
-                } else {
-                    PreviewVideoPlayer(model: model)
-                        .edgesIgnoringSafeArea(.all)
-                }
-
-            } else {
-                NavigationView {
-                    if (model.savingInProgress) {
+        GeometryReader {
+            let size = $0.size
+            let safeArea = $0.safeAreaInsets
+            VStack {
+                if orientation.isLandscape {
+                    if model.savingInProgress {
                         progressView
-                        .navigationTitle("Merging...")
-                        .navigationBarItems(
-                            leading: Button(action: {
-                                model.resetMerge()
-                            }) {
-                                Image(systemName: "xmark")
-                            }
-                        )
                     } else {
-                        MergedVideoView(model: model, timer: timer)
-                            .navigationTitle("Preview")
+                        PreviewVideoPlayer(model: model)
+                            .edgesIgnoringSafeArea(.all)
+                    }
+
+                } else {
+                    NavigationView {
+                        if (model.savingInProgress) {
+                            progressView
+                            .navigationTitle("Merging...")
                             .navigationBarItems(
                                 leading: Button(action: {
                                     model.resetMerge()
@@ -56,33 +49,45 @@ struct MergedView: View {
                                     Image(systemName: "xmark")
                                 }
                             )
+                        } else {
+                            MergedVideoView(model: model, timer: timer, size: size, safeArea: safeArea)
+                                .navigationTitle("Preview")
+                                .navigationBarItems(
+                                    leading: Button(action: {
+                                        model.resetMerge()
+                                    }) {
+                                        Image(systemName: "xmark")
+                                    }
+                                )
+                        }
                     }
+                    .padding()
                 }
-                .padding()
             }
-        }
-        .sheet(isPresented: $model.showShareView, content: {
-            if let shareURL = model.mergedVideo?.url {
-                ActivityView(activityItems: [shareURL], applicationActivities: nil)
+            .sheet(isPresented: $model.showShareView, content: {
+                if let shareURL = model.mergedVideo?.url {
+                    ActivityView(activityItems: [shareURL], applicationActivities: nil)
+                }
+            })
+            .alert("Error", isPresented: $model.isMergeError) {
+                Button("OK", role: .cancel) {
+                    model.isMergeError = false
+                    model.resetMerge()
+                }
+            } message: {
+                Text(model.errMsg)
             }
-        })
-        .alert("Error", isPresented: $model.isMergeError) {
-            Button("OK", role: .cancel) {
-                model.isMergeError = false
-                model.resetMerge()
+            .alert("Success", isPresented: $model.alertSaved) {
+                Button("OK", role: .cancel) {
+                    model.alertSaved = false
+                }
+            } message: {
+                Text("Video saved!")
             }
-        } message: {
-            Text(model.errMsg)
-        }
-        .alert("Success", isPresented: $model.alertSaved) {
-            Button("OK", role: .cancel) {
-                model.alertSaved = false
-            }
-        } message: {
-            Text("Video saved!")
+
         }
 
-    }
+        }
     
     var progressView: some View {
         VStack {

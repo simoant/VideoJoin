@@ -7,9 +7,15 @@
 
 import SwiftUI
 import SwiftData
+import RevenueCat
 
 @main
 struct VideoJoinApp: App {
+    init() {
+            Purchases.logLevel = .debug
+            Purchases.configure(withAPIKey: "appl_fWDAjoNENnPjyAkdPWVLVOKStsW", appUserID: nil)
+        }
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,

@@ -12,9 +12,18 @@ import AVKit
 struct PreviewVideoPlayer: View {
     @StateObject var model: VideoJoinModel
     var body: some View {
-        if let composition = model.mergedVideo?.composition {
-            VideoPlayer(player: AVPlayer(playerItem: AVPlayerItem(asset: composition)))
+        if let avPlayerItem = getAvPlayerItem() {
+            VideoPlayer(player: AVPlayer(playerItem: avPlayerItem))
         }
+    }
+    
+    func getAvPlayerItem() -> AVPlayerItem? {
+        if let composition = model.mergedVideo?.composition, let videoCompsition = model.mergedVideo?.videoComposition {
+            let avPlayerItem = AVPlayerItem(asset: composition)
+            avPlayerItem.videoComposition = videoCompsition
+            return avPlayerItem
+        }
+        return nil
     }
 }
 
