@@ -4,27 +4,13 @@
 
   ],
   "products" : [
-    {
-      "displayPrice" : "2.99",
-      "familyShareable" : false,
-      "internalID" : "6479795324",
-      "localizations" : [
-        {
-          "description" : "Unlimited videos to merge",
-          "displayName" : "All app functionality",
-          "locale" : "en_US"
-        }
-      ],
-      "productID" : "com.simoant.VideoJoin.lifetime",
-      "referenceName" : "lifetime",
-      "type" : "NonConsumable"
-    }
+
   ],
   "settings" : {
     "_applicationInternalID" : "6478782801",
     "_developerTeamID" : "VTJ5AG6JVP",
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 733436942.26106,
+    "_lastSynchronizedDate" : 734176251.77834201,
     "_locale" : "en_US",
     "_storefront" : "USA",
     "_storeKitErrors" : [

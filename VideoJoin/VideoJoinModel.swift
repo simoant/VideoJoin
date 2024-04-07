@@ -238,23 +238,14 @@ class VideoJoinModel: ObservableObject {
             return transform.a == -1.0 && transform.d == -1.0
         }
 
-        // Correct the upside-down video by applying a 180-degree rotation
-        func correctedTransform(for transform: CGAffineTransform) -> CGAffineTransform {
-            // This rotates around the center of the video. Adjust if needed to match the video's resolution.
-            transform.rotated(by: .pi)
-        }
-
         task = Task {
-            let composition = AVMutableComposition()
             
             do {
-                //        throw err("Test")
+                let composition = AVMutableComposition()
                 guard let trackVideo = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
                       let trackAudio = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
                     throw err("Unable to add video/audio track to composition")
                 }
-//                throw err("Test")
-
                 
                 var insertTime = CMTime.zero
                 var fileSize: Int64 = 0
@@ -266,12 +257,6 @@ class VideoJoinModel: ObservableObject {
                 
                 //  Create composition
                 let videos = self.videos.compactMap(\.video)
-                struct VideoTrack {
-                    var video: Video
-                    var track: AVAssetTrack
-                    var start: CMTime
-                    var duration: CMTime
-                }
                 var tracks: [VideoTrack] = [VideoTrack]()
                 for video in videos {
                     let asset = AVAsset(url: video.url)
@@ -280,7 +265,8 @@ class VideoJoinModel: ObservableObject {
                     let duration = CMTime(seconds: video.trimEnd - video.trimStart, preferredTimescale: 600)
                     
                     guard let assetTrackVideo = try await asset.loadTracks(withMediaType: .video).first else {
-                        throw err("Error loading video track for \(video.url)")
+                        let _date = video.date?.formatted(.dateTime.day().month(.defaultDigits).year(.twoDigits).hour().minute())
+                        throw err("Error loading video track for video \(_date)")
                     }
                     
                     try trackVideo.insertTimeRange(CMTimeRangeMake(start: start, duration: duration), of: assetTrackVideo, at: insertTime)
@@ -359,7 +345,6 @@ class VideoJoinModel: ObservableObject {
                 print("Natural size", composition.naturalSize)
                 
                 videoComposition.instructions = instructions
-//                videoComposition.renderSize = composition.naturalSize
                 videoComposition.renderSize = CGSize(width: maxWidth, height: maxHeight)
                 videoComposition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(highestFrameRate))
 

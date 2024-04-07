@@ -27,6 +27,6 @@ struct PreviewVideoPlayer: View {
     }
 }
 
-#Preview {
-    PreviewVideoPlayer(model: VideoJoinModel())
-}
+//#Preview {
+//    PreviewVideoPlayer(model: VideoJoinModel())
+//}

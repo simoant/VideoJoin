@@ -14,9 +14,8 @@ struct DetailedView: View {
     @StateObject private var playerObserver: PlayerObserver
     @StateObject private var orientationManager = OrientationManager()
     
-    private var index: Int
-    private var video: Video?
-
+    private var index: Int = 0
+    private var video: Video? = nil
     
     init(model: VideoJoinModel, index: Int) {
         self.video = model.videos[index].video
@@ -34,69 +33,113 @@ struct DetailedView: View {
     }
 
     var body: some View {
-        ZStack {
-            if let player = self.playerObserver.player {
-                VideoPlayer(player: player)
-                    .edgesIgnoringSafeArea(orientationManager.isLandscape ? .all : .init())
-                    .onAppear {
-                        playerObserver.addPeriodicTimeObserver()
-                    }
-                    .onDisappear {
-                        playerObserver.removePeriodicTimeObserver()
-                    }
-            }
-            VStack {
-                Spacer()
-
-                HStack {
-                    if model.videos[index].video != nil, let video = video {
-                        Button(action: {
-                            model.videos[index].video?.trimStart = playerObserver.currentTime
-                            if video.trimStart > video.trimEnd {
-                                model.videos[index].video?.trimEnd = Double(video.duration)
-                            }
-                        }) {
-                            Text("->|")
-                                .font(.footnote)
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(Color.blue.opacity(0.3))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+        if let player = self.playerObserver.player {
+            if orientationManager.isLandscape {
+                ZStack {
+                    Spacer()
+                    VideoPlayer(player: player)
+                        .edgesIgnoringSafeArea(.all)
+                    
+                        .onAppear {
+                            playerObserver.addPeriodicTimeObserver()
                         }
-                        Text("\(String(format: "%1.f", video.trimStart))s")
-                            .foregroundColor(.white)
-                        Spacer()
-                        
-                        Text("\(String(format: "%2.f", playerObserver.currentTime))s")
-                            .foregroundColor(.white)
-                        
-                        Spacer()
-                        
-                        Text("\(String(format: "%2.f", video.trimEnd))s")
-                            .foregroundColor(.white)
-                        
-                        Button(action: {
-                            playerObserver.player?.pause()
-                            seekTo(target: playerObserver.currentTime)
-                            model.videos[index].video?.trimEnd = playerObserver.currentTime
-                            if video.trimStart > video.trimEnd {
-                                model.videos[index].video?.trimStart = 0
-                            }
-                            
-
-                        }) {
-                            Text("|<-")
-                                .font(.footnote)
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(Color.red.opacity(0.3))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .onDisappear {
+                            playerObserver.removePeriodicTimeObserver()
                         }
-                    } else {
-                        Text("Video not loaded yet...")
+                    VStack {
+                        Spacer()
+                        buttons(color: .white)
+                            .padding()
                     }
                 }
-                .padding()
+            } else {
+                GeometryReader { dim in
+                    let videoSize = video?.resolution ?? CGSize(width: 0, height: 0)
+                    let scale = (dim.size.width - 2 * 15) / videoSize.width
+                    let height = (videoSize.height * scale)
+                    
+                    VStack(alignment: .center) {
+                        Spacer()
+                        VideoPlayer(player: player)
+                            .frame(height: height)
+                            .cornerRadius(8)
+                            .shadow(radius: 5)
+                            
+                            .onAppear {
+                                do {
+                                    try AVAudioSession.sharedInstance().setCategory(.playback)
+                                    try AVAudioSession.sharedInstance().setActive(true)
+                                } catch {
+                                    log("Failed to set audio session category. Error: \(error)")
+                                }
+
+                                playerObserver.addPeriodicTimeObserver()
+                            }
+                            .onDisappear {
+                                playerObserver.removePeriodicTimeObserver()
+                            }
+                        //                    }
+                        buttons(color: .accentColor)
+                            .padding(.top)
+                        Spacer()
+                        
+                    }
+                    .navigationTitle("Trim your clip")
+                    .padding()
+                }
+            }
+        } else {
+            Text("Video not loaded yet...")
+        }
+    }
+    
+    func buttons(color: Color) -> some View {
+        return HStack {
+            if model.videos[index].video != nil, let video = video {
+                Button(action: {
+                    model.videos[index].video?.trimStart = playerObserver.currentTime
+                    if video.trimStart > video.trimEnd {
+                        model.videos[index].video?.trimEnd = Double(video.duration)
+                    }
+                }) {
+                    Text("->|")
+                        .font(.footnote)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.blue.opacity(0.7))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                Text("\(String(format: "%1.f", video.trimStart))s")
+                    .foregroundColor(color)
+                Spacer()
+                
+                Text("\(String(format: "%2.f", playerObserver.currentTime))s")
+                    .foregroundColor(color)
+                
+                Spacer()
+                
+                Text("\(String(format: "%2.f", video.trimEnd))s")
+                    .foregroundColor(color)
+                
+                Button(action: {
+                    playerObserver.player?.pause()
+                    seekTo(target: playerObserver.currentTime)
+                    model.videos[index].video?.trimEnd = playerObserver.currentTime
+                    if video.trimStart > video.trimEnd {
+                        model.videos[index].video?.trimStart = 0
+                    }
+                    
+
+                }) {
+                    Text("|<-")
+                        .font(.footnote)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.red.opacity(0.7))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+            } else {
+                Text("Video not loaded yet...")
             }
         }
     }
@@ -109,5 +152,5 @@ struct DetailedView: View {
 }
 
 //#Preview {
-//    DetailedView(model: VideoJoinModel(), video: Video())
+//    DetailedView(model: VideoJoinModel(), index: 0)
 //}

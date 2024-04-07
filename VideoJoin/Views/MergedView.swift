@@ -50,7 +50,10 @@ struct MergedView: View {
                                 }
                             )
                         } else {
-                            MergedVideoView(model: model, timer: timer, size: size, safeArea: safeArea)
+                            MergedVideoView(model: model, timer: timer 
+//                                            size: size,
+//                                            safeArea: safeArea
+                            )
                                 .navigationTitle("Preview")
                                 .navigationBarItems(
                                     leading: Button(action: {

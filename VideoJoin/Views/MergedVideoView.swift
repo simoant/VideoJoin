@@ -12,8 +12,8 @@ import AVKit
 struct MergedVideoView: View {
     @StateObject var model: VideoJoinModel
     @StateObject var timer: ProgressModel
-    @State var size: CGSize
-    @State var safeArea: EdgeInsets
+//    @State var size: CGSize
+//    @State var safeArea: EdgeInsets
     @FocusState private var filenameFocused: Bool
     @State var fileName = ""
 
@@ -27,16 +27,20 @@ struct MergedVideoView: View {
                 Spacer()
                 
                 PreviewVideoPlayer(model: model)
+                    .cornerRadius(8)
+                    .shadow(radius: 5)
                     .frame(height: height)
                 
+                Text("Estimated file size: \(displayFileSize(size: model.mergedVideo?.fileSize ?? 0))")
+                    .font(.subheadline)
+                
                 Spacer()
-                
-                Text("File size: \(displayFileSize(size: model.mergedVideo?.fileSize ?? 0))")
-                
                 TextField("Enter file name", text: $fileName)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .focused($filenameFocused)
-                    .padding()
+//                    .padding()
+                    .font(.subheadline)
+                    .foregroundColor(.accentColor)
                     .onAppear {
                         fileName = model.defaultFilename() // Set default filename on appear
                     }
@@ -129,6 +133,6 @@ struct MergedVideoView: View {
     }
 }
 
-//#Preview {
-//    MergedVideoView(model: VideoJoinModel(), timer: TimerM)
-//}
+#Preview {
+    MergedVideoView(model: VideoJoinModel(), timer: ProgressModel(progress: 0.0, progressSupplier: {0.0}))
+}
