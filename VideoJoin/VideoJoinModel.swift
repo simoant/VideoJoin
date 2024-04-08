@@ -38,6 +38,7 @@ struct MergedVideo {
     var videoComposition: AVMutableVideoComposition?
     var fileSize: Int64?
     var fileName: String?
+    var hasEdits: Bool = false
 }
 
 class VideoJoinModel: ObservableObject {
@@ -253,6 +254,7 @@ class VideoJoinModel: ObservableObject {
                 var maxWidth: CGFloat = 0
                 var maxHeight: CGFloat = 0
                 var highestFrameRate: Float64 = 0
+                var hasEdits = false
                 var sourceTrackId: CMPersistentTrackID? = nil
                 
                 //  Create composition
@@ -284,10 +286,10 @@ class VideoJoinModel: ObservableObject {
                     highestFrameRate = max(highestFrameRate, Double(nominalFrameRate))
                     
                     guard let assetTrackAudio = try await asset.loadTracks(withMediaType: .audio).first else {
-                        throw err("Error loading video track for \(video.url)")
+                        throw err("Error loading audio track for \(video.url)")
                     }
                     try trackAudio.insertTimeRange(CMTimeRangeMake(start: start, duration: duration), of: assetTrackAudio, at: insertTime)
-                    tracks.append(VideoTrack(video: video, track: assetTrackVideo, start: insertTime, duration: duration))
+                    tracks.append(VideoTrack(video: video, track: assetTrackVideo, start: start, duration: duration, insertTime: insertTime))
                     
                     insertTime = CMTimeAdd(insertTime, duration)
                     fileSize += video.size
@@ -304,11 +306,12 @@ class VideoJoinModel: ObservableObject {
                     let naturalSize = videoTrack.track.naturalSize
                     
                     let instruction = AVMutableVideoCompositionInstruction()
-                    instruction.timeRange = CMTimeRange(start: videoTrack.start, duration: videoTrack.duration)
+                    instruction.timeRange = CMTimeRange(start: videoTrack.insertTime, duration: videoTrack.duration)
                     
                     let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: trackVideo)
-
+                    
                     if preferredTransform.b == 1.0 || preferredTransform.c == -1.0 { // Video is rotated 90° or 270°
+                        print("rotated")
                         let verticalVideoSize = naturalSize
                         let verticalHeight = verticalVideoSize.width
                         let verticalWidth = verticalVideoSize.height
@@ -322,18 +325,20 @@ class VideoJoinModel: ObservableObject {
                         finalTransform.ty = 0
                         finalTransform.tx = translateX
                         finalTransform = finalTransform.scaledBy(x: scaleFactor, y: scaleFactor) //.translatedBy(x: translateX, y: 0)
-                        print(finalTransform)
                         print(preferredTransform)
+                        print(finalTransform)
 
                         // Apply the transform to the layer instruction
                         layerInstruction.setTransform(finalTransform, at: videoTrack.start)
+                        hasEdits = true
                     } else {
-                        var scaleFactor = (maxWidth / naturalSize.width)
+                        print("Normal")
+                        let scaleFactor = (maxWidth / naturalSize.width)
+                        let finalTransform = preferredTransform.scaledBy(x: scaleFactor, y: scaleFactor)
                         
-                        var finalTransform = preferredTransform.scaledBy(x: scaleFactor, y: scaleFactor)
-                        print(finalTransform)
                         print(preferredTransform)
-
+                        print(finalTransform)
+                        
                         layerInstruction.setTransform(finalTransform, at: videoTrack.start)
                     }
 
@@ -354,84 +359,9 @@ class VideoJoinModel: ObservableObject {
 
                 await self.setMergedVideo(
                     mergedVideo: MergedVideo(
-                        url: nil, composition: composition, videoComposition: videoComposition, fileSize: fileSize, fileName: self.defaultFilename()
+                        url: nil, composition: composition, videoComposition: videoComposition, fileSize: fileSize, fileName: self.defaultFilename(), hasEdits: hasEdits
                     )
                 )
-                    
-                    // Handle video track
-//                    if let assetTrackVideo = try await asset.loadTracks(withMediaType: .video).first {
-//                        sourceTrackId = assetTrackVideo.trackID
-//                        try trackVideo.insertTimeRange(CMTimeRangeMake(start: start, duration: duration), of: assetTrackVideo, at: insertTime)
-//                        log("Preffered transformation: \(assetTrackVideo.preferredTransform)")
-//                        let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: trackVideo)
-//                        let preferredTransform = assetTrackVideo.preferredTransform
-////                        if isVideoUpsideDown(preferredTransform) {
-////                            // If upside-down, apply a correction
-////                            let transform: CGAffineTransform = CGAffineTransform(rotationAngle: .pi)
-////                            layerInstruction.setTransform(transform, at: start)
-////                        } else {
-//                            // If not upside-down, use the original preferred transform
-////                            trackVideo.preferredTransform = assetTrackVideo.preferredTransform
-//                            layerInstruction.setTransform(preferredTransform, at: start)
-////                        }
-//                        
-//                        // Load the track's properties
-//                        let naturalSize = assetTrackVideo.naturalSize
-//                        
-//                        
-//                        // Calculate the video's actual orientation and size after applying the preferredTransform.
-//                        let videoSize: CGSize
-//                        if preferredTransform.b == 1.0 || preferredTransform.c == -1.0 { // Video is rotated 90° or 270°
-//                            // Swap width and height
-//                            let k = naturalSize.height / naturalSize.width
-//                            videoSize = CGSize(width: naturalSize.height * k, height: naturalSize.width * k)
-//                        } else {
-//                            videoSize = naturalSize
-//                        }
-//                        
-////                        layerInstruction.setCropRectangle(CGRect(x: 0, y: 0, width: videoSize.width, height: videoSize.height), at: insertTime)
-//                        
-//                        maxWidth = max(maxWidth, videoSize.width)
-//                        maxHeight = max(maxHeight, videoSize.height)
-//                        
-//                        
-//                        let nominalFrameRate = assetTrackVideo.nominalFrameRate
-//                        highestFrameRate = max(highestFrameRate, Double(nominalFrameRate))
-//                        
-//                        let instruction = AVMutableVideoCompositionInstruction()
-////                        layerInstruction.setCropRectangle(, at: insertTime)
-//                        instruction.timeRange = CMTimeRange(start: insertTime, duration: duration)
-//                        instruction.layerInstructions = [layerInstruction]
-//                        
-//                        instructions.append(instruction)
-//
-//                        
-//                        
-//                    } else { throw err("Failed loading video tracks") }
-//                    
-//                    // Handle audio track
-//                    if let assetTrackAudio = try await asset.loadTracks(withMediaType: .audio).first {
-//                        try trackAudio.insertTimeRange(CMTimeRangeMake(start: start, duration: duration), of: assetTrackAudio, at: insertTime)
-//                    } else { throw err("Failed loading video tracks") }
-//                    
-//                    insertTime = CMTimeAdd(insertTime, duration)
-//                    fileSize += video.size
-//                }
-//
-//                let videoComposition = try await AVMutableVideoComposition.videoComposition(withPropertiesOf: composition)
-////                videoComposition.customVideoCompositorClass = CustomCompositor.self
-//                videoComposition.instructions = instructions
-////                videoComposition.renderSize = composition.naturalSize
-//                videoComposition.renderSize = CGSize(width: maxWidth, height: maxHeight)
-//                videoComposition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(highestFrameRate))
-////                videoComposition.frameDuration = CMTime(seconds: 1, preferredTimescale: 600)
-////                videoComposition.renderScale = 0.5
-////                videoComposition.sourceTrackIDForFrameTiming = sourceTrackId!
-//                
-////                videoComposition.renderSize = CGSize(width: 1280, height: 720)  Set to a default resolution for testing
-////                videoComposition.frameDuration = CMTime(value: 1, timescale: 30) // Example: 30 fps
-//
-                    
 
             } catch {
                 self.handle(error)
@@ -483,7 +413,13 @@ class VideoJoinModel: ObservableObject {
                 throw err("Videos videoComposition is empty")
             }
             
-            guard let exportSession = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough) else {
+            let presetName = if mergedVideo?.hasEdits == true {
+                AVAssetExportPresetHEVCHighestQuality
+            } else {
+                AVAssetExportPresetPassthrough
+            }
+            print("Export preset", presetName)
+            guard let exportSession = AVAssetExportSession(asset: composition, presetName: presetName) else {
                 throw err("Could not create export session")
             }
             
@@ -497,6 +433,7 @@ class VideoJoinModel: ObservableObject {
             
             exportSession.outputURL = outputFileURL
             exportSession.videoComposition = videoComposition
+//            print("Video Composiition:", videoComposition.instructions)
             exportSession.outputFileType = .mov
             log("Output url: \(outputFileURL)")
             

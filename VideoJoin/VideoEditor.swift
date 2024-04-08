@@ -54,7 +54,7 @@ class VideoEditor {
                 throw err("Error loading video track for \(video.url)")
             }
             try trackAudio.insertTimeRange(CMTimeRangeMake(start: start, duration: duration), of: assetTrackAudio, at: insertTime)
-            tracks.append(VideoTrack(video: video, track: assetTrackVideo, start: insertTime, duration: duration))
+            tracks.append(VideoTrack(video: video, track: assetTrackVideo, start: insertTime, duration: duration, insertTime: insertTime))
             
             insertTime = CMTimeAdd(insertTime, duration)
             fileSize += video.size
@@ -69,5 +69,6 @@ struct VideoTrack {
     var track: AVAssetTrack
     var start: CMTime
     var duration: CMTime
+    var insertTime: CMTime
 }
 
