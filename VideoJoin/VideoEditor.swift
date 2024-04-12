@@ -70,5 +70,7 @@ struct VideoTrack {
     var start: CMTime
     var duration: CMTime
     var insertTime: CMTime
+    var location: String?
+    var captureDate: Date?
 }
 

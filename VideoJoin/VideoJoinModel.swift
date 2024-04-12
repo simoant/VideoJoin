@@ -39,6 +39,8 @@ struct MergedVideo {
     var fileSize: Int64?
     var fileName: String?
     var hasEdits: Bool = false
+    var location: String?
+    var captureDate: Date?
 }
 
 class VideoJoinModel: ObservableObject {
@@ -268,8 +270,8 @@ class VideoJoinModel: ObservableObject {
                 //  Create composition
                 let videos = self.videos.compactMap(\.video)
                 var tracks: [VideoTrack] = [VideoTrack]()
-                for video in videos {
-                    let asset = AVAsset(url: video.url)
+                for (index, video) in videos.enumerated() {
+                    let asset = AVURLAsset(url: video.url)
                     
                     let start = CMTime(seconds: video.trimStart, preferredTimescale: 600)
                     let duration = CMTime(seconds: video.trimEnd - video.trimStart, preferredTimescale: 600)
@@ -298,7 +300,11 @@ class VideoJoinModel: ObservableObject {
                         throw err("Error loading audio track for \(video.url)")
                     }
                     try trackAudio.insertTimeRange(CMTimeRangeMake(start: start, duration: duration), of: assetTrackAudio, at: insertTime)
-                    tracks.append(VideoTrack(video: video, track: assetTrackVideo, start: start, duration: duration, insertTime: insertTime))
+                    
+                    let (location, captureDate) = extractMetadata(from: asset)
+
+                    tracks.append(VideoTrack(video: video, track: assetTrackVideo, start: start, duration: duration, insertTime: insertTime,
+                                             location: location, captureDate: captureDate))
                     
                     insertTime = CMTimeAdd(insertTime, duration)
                     fileSize += video.size
@@ -317,7 +323,7 @@ class VideoJoinModel: ObservableObject {
                 // MARK: create video editing composition
                 let videoComposition = try await AVMutableVideoComposition.videoComposition(withPropertiesOf: composition)
                 var instructions = [AVMutableVideoCompositionInstruction]()
-                for videoTrack in tracks {
+                for (index, videoTrack) in tracks.enumerated() {
                     let preferredTransform = videoTrack.track.preferredTransform
                     let naturalSize = videoTrack.track.naturalSize
                     
@@ -386,10 +392,13 @@ class VideoJoinModel: ObservableObject {
 //                log("Video composition instructions: \(videoComposition.instructions)")
                 log("Video composition renderSize: \(videoComposition.renderSize)")
                 log("Video composition frameDuration: \(videoComposition.frameDuration)")
+                
+                let location = tracks.last?.location
+                let captureDate = tracks.last?.captureDate
 
                 await self.setMergedVideo(
                     mergedVideo: MergedVideo(
-                        url: nil, composition: composition, videoComposition: videoComposition, fileSize: fileSize, fileName: self.defaultFilename(), hasEdits: hasEdits
+                        url: nil, composition: composition, videoComposition: videoComposition, fileSize: fileSize, fileName: self.defaultFilename(), hasEdits: hasEdits, location: location, captureDate: captureDate
                     )
                 )
                 await MainActor.run {
@@ -469,6 +478,37 @@ class VideoJoinModel: ObservableObject {
 //            print("Video Composiition:", videoComposition.instructions)
             exportSession.outputFileType = .mov
             log("Output url: \(outputFileURL)")
+            
+            var metadata = [AVMetadataItem]()
+
+            // Adding location metadata
+            if let location = mergedVideo?.location {
+                let locationItem = AVMutableMetadataItem()
+                locationItem.key = AVMetadataKey.quickTimeMetadataKeyLocationISO6709 as (NSCopying & NSObjectProtocol)?
+                locationItem.keySpace = AVMetadataKeySpace.quickTimeMetadata
+                locationItem.value = location as (NSCopying & NSObjectProtocol)?
+                metadata.append(locationItem)
+            }
+
+            // Adding capture date metadata
+            if let captureDate = mergedVideo?.captureDate {
+                let dateItem = AVMutableMetadataItem()
+                dateItem.key = AVMetadataKey.quickTimeMetadataKeyCreationDate as (NSCopying & NSObjectProtocol)?
+                dateItem.keySpace = AVMetadataKeySpace.quickTimeMetadata
+                dateItem.value = ISO8601DateFormatter().string(from: captureDate) as (NSCopying & NSObjectProtocol)?
+                metadata.append(dateItem)
+            }
+            
+            // Adding caption metadata
+//            if let caption = fileName {
+            let captionItem = AVMutableMetadataItem()
+            captionItem.key = AVMetadataKey.commonKeyDescription as (NSCopying & NSObjectProtocol)?
+            captionItem.keySpace = AVMetadataKeySpace.common
+            captionItem.value = fileName as (NSCopying & NSObjectProtocol)?
+            metadata.append(captionItem)
+//            }
+            
+            exportSession.metadata = metadata
             
             await setExportSession(exportSession: exportSession)
             
@@ -557,6 +597,25 @@ class VideoJoinModel: ObservableObject {
         guard let filename = mergedVideo?.fileName else { return false }
         let result = filename.range(of: pattern, options: .regularExpression)
         return result != nil
+    }
+    
+    func extractMetadata(from asset: AVURLAsset) -> (location: String?, captureDate: Date?) {
+        var location: String?
+        var captureDate: Date?
+
+        // Extracting location
+        let locationMetadata = AVMetadataItem.metadataItems(from: asset.metadata, filteredByIdentifier: .quickTimeMetadataLocationISO6709)
+        if let locationItem = locationMetadata.first, let locationString = locationItem.stringValue {
+            location = locationString
+        }
+
+        // Extracting capture date
+        let dateMetadata = AVMetadataItem.metadataItems(from: asset.metadata, filteredByIdentifier: .quickTimeMetadataCreationDate)
+        if let dateItem = dateMetadata.first, let dateString = dateItem.stringValue, let date = ISO8601DateFormatter().date(from: dateString) {
+            captureDate = date
+        }
+
+        return (location, captureDate)
     }
 
     
