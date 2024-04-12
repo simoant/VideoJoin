@@ -16,73 +16,82 @@ struct MergedVideoView: View {
 //    @State var safeArea: EdgeInsets
     @FocusState private var filenameFocused: Bool
     @State var fileName = ""
+    @State var width = 0.0
+    @State var height = 0.0
 
     var body: some View {
-        GeometryReader { dim in
-            VStack {
-                let videoSize = model.mergedVideo?.composition?.naturalSize ?? CGSize(width: 0, height: 0)
-                let scale = dim.size.width / videoSize.width
-                let height = (videoSize.height * scale)
-                
-                Spacer()
+        VStack(alignment: .center) {
+            Spacer()
+            ZStack {
+                GeometryReader { geometry in
+                    Color.clear // Invisible view just to calculate sizes
+                        .onAppear {
+                            // Calculate the video size and scale here but do not place the video player inside
+                            let videoSize = model.mergedVideo?.composition?.naturalSize ?? CGSize(width: 0, height: 0)
+                            let scale = min(geometry.size.width / videoSize.width, geometry.size.height / videoSize.height)
+                            height = videoSize.height * scale
+                            width = videoSize.width * scale
+                            print(height, width, videoSize, scale, geometry.size)
+                        }
+                }
                 
                 PreviewVideoPlayer(model: model)
                     .cornerRadius(8)
                     .shadow(radius: 5)
-                    .frame(height: height)
-                
-                Text("Estimated file size: \(displayFileSize(size: model.mergedVideo?.fileSize ?? 0))")
-                    .font(.subheadline)
-                
-                Spacer()
-                TextField("Enter file name", text: $fileName)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .focused($filenameFocused)
+                    .frame(width: width, height: height, alignment: .bottom)
+            }
+            
+            Text("Estimated file size: \(displayFileSize(size: model.mergedVideo?.fileSize ?? 0))")
+                .font(.subheadline)
+            
+            Spacer()
+            TextField("Enter file name", text: $fileName)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .focused($filenameFocused)
 //                    .padding()
-                    .font(.subheadline)
-                    .foregroundColor(.accentColor)
-                    .onAppear {
-                        fileName = model.defaultFilename() // Set default filename on appear
-                    }
-                    .onChange(of: fileName) { newValue in
-                        model.mergedVideo?.fileName = fileName
-                        //                            model.fileName = validateFilename(newValue) ? newValue : viewModel.fileName
-                    }
-                HStack(spacing: 20) {
-                    Button(action: { self.exportToPhotoLibrary() })  {
-                        Text("Save")
-                            .bold()
-                            .frame(minWidth: 0, maxWidth: .infinity)
-                            .padding()
-                            .foregroundColor(.white)
-                            .background(disabled() ?
-                                        RoundedRectangle(cornerRadius: 10).fill(Color.gray) :
-                                            RoundedRectangle(cornerRadius: 10).fill(Color.blue))
-                            .shadow(radius: 3)
-                            .opacity(disabled() ? 0.5 : 1)
-                    }.disabled(disabled())
-                    
-                    Button(action: { self.share() })  {
-                        Text("Share")
-                            .bold()
-                            .frame(minWidth: 0, maxWidth: .infinity)
-                            .padding()
-                            .foregroundColor(.white)
-                            .background(disabled() ?
-                                        RoundedRectangle(cornerRadius: 10).fill(Color.gray) :
-                                            RoundedRectangle(cornerRadius: 10).fill(Color.blue))
-                            .shadow(radius: 3)
-                            .opacity(disabled() ? 0.5 : 1)
-                    }.disabled(disabled())
-                }
-                .padding(.top)
+                .font(.subheadline)
+                .foregroundColor(.accentColor)
                 .onAppear {
-                    do {
-                        try AVAudioSession.sharedInstance().setCategory(.playback)
-                        try AVAudioSession.sharedInstance().setActive(true)
-                    } catch {
-                        log("Failed to set audio session category. Error: \(error)")
-                    }
+                    fileName = model.defaultFilename() // Set default filename on appear
+                }
+                .onChange(of: fileName) { newValue in
+                    model.mergedVideo?.fileName = fileName
+                    //                            model.fileName = validateFilename(newValue) ? newValue : viewModel.fileName
+                }
+            HStack(spacing: 20) {
+                Button(action: { self.exportToPhotoLibrary() })  {
+                    Text("Save")
+                        .bold()
+                        .frame(minWidth: 0, maxWidth: .infinity)
+                        .padding()
+                        .foregroundColor(.white)
+                        .background(disabled() ?
+                                    RoundedRectangle(cornerRadius: 10).fill(Color.gray) :
+                                        RoundedRectangle(cornerRadius: 10).fill(Color.blue))
+                        .shadow(radius: 3)
+                        .opacity(disabled() ? 0.5 : 1)
+                }.disabled(disabled())
+                
+                Button(action: { self.share() })  {
+                    Text("Share")
+                        .bold()
+                        .frame(minWidth: 0, maxWidth: .infinity)
+                        .padding()
+                        .foregroundColor(.white)
+                        .background(disabled() ?
+                                    RoundedRectangle(cornerRadius: 10).fill(Color.gray) :
+                                        RoundedRectangle(cornerRadius: 10).fill(Color.blue))
+                        .shadow(radius: 3)
+                        .opacity(disabled() ? 0.5 : 1)
+                }.disabled(disabled())
+            }
+            .padding(.top)
+            .onAppear {
+                do {
+                    try AVAudioSession.sharedInstance().setCategory(.playback)
+                    try AVAudioSession.sharedInstance().setActive(true)
+                } catch {
+                    log("Failed to set audio session category. Error: \(error)")
                 }
             }
         }

@@ -233,10 +233,19 @@ class VideoJoinModel: ObservableObject {
     
     func merge() {
         self.progress = 0.0
-        self.showMergeView = true
         
         func isVideoUpsideDown(_ transform: CGAffineTransform) -> Bool {
             return transform.a == -1.0 && transform.d == -1.0
+        }
+        
+        func allVertical(tracks: [VideoTrack]) -> Bool {
+            return tracks.allSatisfy({ track in
+                isRotated90(track: track)
+            })
+        }
+        
+        @Sendable func isRotated90(track: VideoTrack) -> Bool {
+            return track.track.preferredTransform.b == 1.0 || track.track.preferredTransform.c == -1.0
         }
 
         task = Task {
@@ -255,7 +264,6 @@ class VideoJoinModel: ObservableObject {
                 var maxHeight: CGFloat = 0
                 var highestFrameRate: Float64 = 0
                 var hasEdits = false
-                var sourceTrackId: CMPersistentTrackID? = nil
                 
                 //  Create composition
                 let videos = self.videos.compactMap(\.video)
@@ -275,6 +283,7 @@ class VideoJoinModel: ObservableObject {
                     
                     // Load the track's properties
                     let naturalSize = assetTrackVideo.naturalSize
+                    print("Natural size", naturalSize)
                     
                     let preferredTransform = assetTrackVideo.preferredTransform
                     log("Preffered transformation: \(preferredTransform)")
@@ -298,7 +307,14 @@ class VideoJoinModel: ObservableObject {
                 log("Composition natural size: \(composition.naturalSize)")
                 log("Max size: \(maxWidth) \(maxHeight)")
                 
-                // create video editing composition
+                // MARK: check if all videos al vertical
+                let allVertical = allVertical(tracks: tracks)
+                
+                if allVertical {
+                    composition.naturalSize = CGSize(width: composition.naturalSize.height, height: composition.naturalSize.width)
+                }
+                
+                // MARK: create video editing composition
                 let videoComposition = try await AVMutableVideoComposition.videoComposition(withPropertiesOf: composition)
                 var instructions = [AVMutableVideoCompositionInstruction]()
                 for videoTrack in tracks {
@@ -310,7 +326,17 @@ class VideoJoinModel: ObservableObject {
                     
                     let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: trackVideo)
                     
-                    if preferredTransform.b == 1.0 || preferredTransform.c == -1.0 { // Video is rotated 90° or 270°
+                    if allVertical {
+                        print("allVertical")
+                        let scaleFactor = min(maxWidth / naturalSize.width, maxHeight / naturalSize.height)
+                        var finalTransform = preferredTransform
+                        finalTransform = finalTransform
+                            .scaledBy(x: scaleFactor, y: scaleFactor)
+                        print(preferredTransform)
+                        print(finalTransform)
+                        layerInstruction.setTransform(finalTransform, at: videoTrack.start)
+                        hasEdits = true
+                    } else if isRotated90(track: videoTrack) { // Video is rotated 90° or 270°
                         print("rotated")
                         let verticalVideoSize = naturalSize
                         let verticalHeight = verticalVideoSize.width
@@ -344,13 +370,17 @@ class VideoJoinModel: ObservableObject {
 
                     instruction.layerInstructions = [layerInstruction]
                     instructions.append(instruction)
-
                 }
                 
                 print("Natural size", composition.naturalSize)
+                print("Width", maxWidth, "Height", maxHeight)
                 
                 videoComposition.instructions = instructions
-                videoComposition.renderSize = CGSize(width: maxWidth, height: maxHeight)
+                videoComposition.renderSize = if allVertical {
+                    CGSize(width: maxHeight, height: maxWidth)
+                } else {
+                    CGSize(width: maxWidth, height: maxHeight)
+                }
                 videoComposition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(highestFrameRate))
 
 //                log("Video composition instructions: \(videoComposition.instructions)")
@@ -362,6 +392,9 @@ class VideoJoinModel: ObservableObject {
                         url: nil, composition: composition, videoComposition: videoComposition, fileSize: fileSize, fileName: self.defaultFilename(), hasEdits: hasEdits
                     )
                 )
+                await MainActor.run {
+                    self.showMergeView = true
+                }
 
             } catch {
                 self.handle(error)
