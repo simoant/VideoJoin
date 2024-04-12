@@ -236,11 +236,11 @@ class VideoJoinModel: ObservableObject {
     func merge() {
         self.progress = 0.0
         
-        func isVideoUpsideDown(_ transform: CGAffineTransform) -> Bool {
-            return transform.a == -1.0 && transform.d == -1.0
+        @Sendable func isVideoUpsideDown(track: VideoTrack) -> Bool {
+            return track.track.preferredTransform.a == -1.0 && track.track.preferredTransform.d == -1.0
         }
         
-        func allVertical(tracks: [VideoTrack]) -> Bool {
+        @Sendable func allVertical(tracks: [VideoTrack]) -> Bool {
             return tracks.allSatisfy({ track in
                 isRotated90(track: track)
             })
@@ -348,7 +348,7 @@ class VideoJoinModel: ObservableObject {
                         let verticalHeight = verticalVideoSize.width
                         let verticalWidth = verticalVideoSize.height
                         print(verticalHeight, verticalWidth)
-
+                        
                         let scaleFactorResolution = maxWidth / naturalSize.width
                         let scaleFactor = (verticalWidth * scaleFactorResolution) / (maxWidth / scaleFactorResolution)
                         
@@ -359,10 +359,21 @@ class VideoJoinModel: ObservableObject {
                         finalTransform = finalTransform.scaledBy(x: scaleFactor, y: scaleFactor) //.translatedBy(x: translateX, y: 0)
                         print(preferredTransform)
                         print(finalTransform)
-
+                        
                         // Apply the transform to the layer instruction
                         layerInstruction.setTransform(finalTransform, at: videoTrack.start)
                         hasEdits = true
+                    } else if isVideoUpsideDown(track: videoTrack) {
+                        print("Upside down")
+                        let scaleFactor = (maxWidth / naturalSize.width)
+                        let finalTransform = preferredTransform.scaledBy(x: scaleFactor, y: scaleFactor)
+                        
+                        print(preferredTransform)
+                        print(finalTransform)
+                        
+                        layerInstruction.setTransform(finalTransform, at: videoTrack.start)
+                        hasEdits = true
+
                     } else {
                         print("Normal")
                         let scaleFactor = (maxWidth / naturalSize.width)

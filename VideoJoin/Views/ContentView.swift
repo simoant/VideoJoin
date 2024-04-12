@@ -76,7 +76,7 @@ struct ContentView: View {
                     .onPurchaseCompleted { customerInfo in
                         log("Purchase completed: \(customerInfo.entitlements)")
                         Task { await model.updateVersionStatus() }
-                        addVideos()
+//                        addVideos()
                     }
                     .onPurchaseFailure { error in
                         log("Purchase failed: \(error.localizedDescription)")
@@ -88,10 +88,17 @@ struct ContentView: View {
                         model.errMsg = "Your purchase was canceled. You are still using limited version"
                         model.isError = true
                     }
-//                    .onRequestedDismissal {
-//                        log("Purchase dialog dismissal")
-//                        model.clear()
-//                    }
+                    .onRestoreCompleted { customerInfo in
+                        print("Restore completed")
+                        Task { await model.updateVersionStatus() }
+                        model.showPaywall = false
+//                        addVideos()
+                    }
+                    .onRestoreFailure {_ in 
+                        log("Restore failed")
+                        model.errMsg = "Could not restore purchases. You are still using limited version"
+                        model.isError = true
+                    }
             }
             //  Photo Picker
             .photosPicker(isPresented: $showingPicker, selection: $model.selected,
