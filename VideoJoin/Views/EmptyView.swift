@@ -19,9 +19,9 @@ struct EmptyView: View {
             
             if !(model.fullVersion) {
                 Spacer()
-                Text("Free version allows you to merge only \(model.maxFreeVideos) videos. You can subscribe to remove the limitation")
+                Text("The app is free, but you can support my work by subscribing :)")
                 Spacer()
-                Button("Subscribe") {
+                Button("Buy me a coffee!") {
                     model.displayPaywall()
                 }
             }

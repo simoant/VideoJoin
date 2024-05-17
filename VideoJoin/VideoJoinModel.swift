@@ -71,7 +71,7 @@ class VideoJoinModel: ObservableObject {
     @Published var showPaywall = false
     @Published var fullVersion = true
     
-    let maxFreeVideos = 2
+    let maxFreeVideos = 100
     
     @MainActor
     func displayPaywall() {

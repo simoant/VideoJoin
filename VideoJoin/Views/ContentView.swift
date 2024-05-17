@@ -17,7 +17,6 @@ struct ContentView: View {
     @Query private var items: [Item]
     
     @StateObject var model = VideoJoinModel()
-//    @StateObject var skit = StoreKitManager()
     
     @State private var showingPicker = false
     
@@ -72,33 +71,7 @@ struct ContentView: View {
             })
             .sheet(isPresented: $model.showPaywall) {
 //                PaywallView(configuration: paywallConfig)
-                PaywallView(displayCloseButton: true)
-                    .onPurchaseCompleted { customerInfo in
-                        log("Purchase completed: \(customerInfo.entitlements)")
-                        Task { await model.updateVersionStatus() }
-//                        addVideos()
-                    }
-                    .onPurchaseFailure { error in
-                        log("Purchase failed: \(error.localizedDescription)")
-                        model.errMsg = "Something went wrong with your purchase"
-                        model.isError = true
-                    }
-                    .onPurchaseCancelled {
-                        log("Purchase cancelled")
-                        model.errMsg = "Your purchase was canceled. You are still using limited version"
-                        model.isError = true
-                    }
-                    .onRestoreCompleted { customerInfo in
-                        print("Restore completed")
-                        Task { await model.updateVersionStatus() }
-                        model.showPaywall = false
-//                        addVideos()
-                    }
-                    .onRestoreFailure {_ in 
-                        log("Restore failed")
-                        model.errMsg = "Could not restore purchases. You are still using limited version"
-                        model.isError = true
-                    }
+                RevenueCatPaywallView(model: model)
             }
             //  Photo Picker
             .photosPicker(isPresented: $showingPicker, selection: $model.selected,
@@ -121,7 +94,11 @@ struct ContentView: View {
 
             //  Toolbar
             .toolbar {
-                ToolbarItemGroup(placement: .automatic) {
+                ToolbarItemGroup(placement: .topBarLeading) {
+                    EditButton()
+                        .disabled(model.videos.count < 1)
+                }
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     Button(action: showVideoPicker) {
                         Label("Add Video", systemImage: "plus")
                     }
@@ -135,8 +112,6 @@ struct ContentView: View {
                     }
                     .disabled(model.videos.count < 2 || !model.allLoaded())
 
-                    EditButton()
-                        .disabled(model.videos.count < 1)
 
                     NavigationLink {
                         AboutView()
@@ -183,3 +158,36 @@ struct ContentView: View {
         .modelContainer(for: Item.self, inMemory: true)
 }
 
+
+struct RevenueCatPaywallView: View {
+    @StateObject var model: VideoJoinModel
+
+    var body: some View {
+        PaywallView(displayCloseButton: true)
+            .onPurchaseCompleted { customerInfo in
+                log("Purchase completed: \(customerInfo.entitlements)")
+                Task { await model.updateVersionStatus() }
+                //                        addVideos()
+            }
+            .onPurchaseFailure { error in
+                log("Purchase failed: \(error.localizedDescription)")
+                model.errMsg = "Something went wrong with your purchase"
+                model.isError = true
+            }
+            .onPurchaseCancelled {
+                log("Purchase cancelled")
+                model.errMsg = "Your purchase was canceled. You are still using limited version"
+                model.isError = true
+            }
+            .onRestoreCompleted { customerInfo in
+                print("Restore completed")
+                Task { await model.updateVersionStatus() }
+                //                        addVideos()
+            }
+            .onRestoreFailure {_ in
+                log("Restore failed")
+                model.errMsg = "Could not restore purchases. You are still using limited version"
+                model.isError = true
+            }
+    }
+}
