@@ -24,6 +24,10 @@ struct EmptyView: View {
                 Button("Buy me a coffee!") {
                     model.displayPaywall()
                 }
+            } else {
+                Spacer()
+                Text("Dear Subscriber! Thank you for your support!")
+                Spacer()
             }
         }
     }
@@ -37,15 +41,6 @@ struct EmptyView: View {
             }, description: {
                 description
             })
-//            ContentUnavailableView(text,
-//                                   systemImage: "video",
-//                                   description: description
-//            )
-//            .onAppear(perform: {
-//                Task {
-//                    self.fullVersion = try await self.model.hasActiveSubscription()
-//                }
-//            })
             Spacer()
         }
         Spacer()
